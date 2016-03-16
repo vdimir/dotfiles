@@ -1,0 +1,99 @@
+HISTFILE=~/.zhistfile
+HISTSIZE=1000
+SAVEHIST=1000
+
+fpath=(~/.zsh/site-functions $fpath) 
+
+setopt HIST_IGNORE_ALL_DUPS
+setopt HIST_REDUCE_BLANKS
+setopt HIST_IGNORE_SPACE
+setopt INC_APPEND_HISTORY
+
+#setopt correctall
+
+setopt appendhistory extendedglob nomatch notify autocd 
+unsetopt beep
+bindkey -e
+
+zstyle ':completion:*:processes' command 'ps -xuf'
+zstyle ':completion:*:processes' sort false
+zstyle ':completion:*:processes-names' command 'ps xho command'
+
+eval `dircolors`
+zstyle ':completion:*:default' list-colors ${(s.:.)LS_COLORS}
+zstyle ':completion:*:functions' ignored-patterns '_*'
+zstyle ':completion:*' completer _expand _complete _ignored _correct _approximate
+zstyle ':completion:*' menu select
+zstyle ':completion:*' use-compctl false
+zstyle :compinstall filename '/home/vladimir/.zshrc'
+
+autoload -Uz compinit
+compinit
+export WORDCHARS='*?_-.[]~=&;!#$%^(){}<>'
+
+setopt prompt_subst
+autoload -Uz vcs_info
+zstyle ':vcs_info:*' enable git 
+
+precmd() {
+   # tmux set -qg status-left "#S #P $(pwd)"
+    #vcs_info
+    rehash
+}
+
+autoload -U colors && colors
+#zstyle ':vcs_info:git*' formats " %b %m%u%c"
+zstyle ':vcs_info:git*' formats "%{$reset_color%}%b%{$reset_color%} %m%u%c%{$reset_color%}"
+zstyle ':vcs_info:*' check-for-changes true
+PROMPT=$' %{\e[1;34m%}%~ ${vcs_info_msg_0_}%{\e[1;34m%}%#%{\e[0m%} '
+RPROMPT='%T'
+
+alias ls='ls --group-directories-first --color=auto'
+alias dir='dir --color=auto'
+alias vdir='vdir --color=auto'
+alias grep='grep --color=auto'
+alias fgrep='fgrep --color=auto'
+alias egrep='egrep --color=auto'
+
+alias mv='nocorrect mv'
+alias cp='nocorrect cp'
+alias mkdir='nocorrect mkdir'
+alias sudo='nocorrect sudo'
+
+alias ll='ls -lh'
+alias la='ls -a'
+alias l='ls -lah'
+alias lla='ls -lah'
+alias du='du -h'
+alias df='df -h'
+alias -g G='|grep'
+alias -g T='|tail'
+alias -g H='|head'
+alias -g L='|less'
+alias -g C='|wc -l'
+
+alias gis='git status'
+alias svim='sudoedit' 
+alias sapt='sudo aptitude'
+
+bindkey '5D' backward-word
+bindkey '5C' forward-word
+bindkey '3D' backward-word
+bindkey '3C' forward-word
+
+bindkey '\e\e[D' backward-word
+bindkey '\e\e[C' forward-word
+bindkey '\e[7~'  beginning-of-line
+bindkey '\e[8~'  end-of-line
+bindkey '^[[1~'  beginning-of-line
+bindkey '^[[4~'  end-of-line
+bindkey '^[[A' up-line-or-search
+bindkey '^[[B' down-line-or-search
+bindkey '\e[3~' delete-char
+
+export PATH=$PATH:~/opt/bin:./node_modules/.bin:~/opt/rust/bin:~/.multirust/toolchains/stable/cargo/bin
+export RUST_SRC_PATH=~/sources/rust/rustc-1.7.0/src
+#export LD_LIBRARY_PATH=~/opt/rust/rustc/lib:$LD_LIBRARY_PATH
+
+export N_PREFIX="$HOME/opt/n"; [[ :$PATH: == *":$N_PREFIX/bin:"* ]] || PATH+=":$N_PREFIX/bin"  # Added by n-install (see http://git.io/n-install-repo).
+

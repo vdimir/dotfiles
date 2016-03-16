@@ -1,0 +1,70 @@
+alignment top_middle
+background yes
+xftalpha 0.8
+
+cpu_avg_samples 2
+
+draw_borders no
+draw_graph_borders yes
+draw_outline no
+
+gap_x 0
+gap_y 50
+
+minimum_size 5 5
+maximum_width 500
+
+net_avg_samples 2
+
+out_to_console no
+out_to_stderr no
+extra_newline no
+
+no_buffers yes
+double_buffer yes
+
+own_window yes
+own_window_title conky
+own_window_hints undecorated,below,sticky,skip_taskbar,skip_pager
+own_window_argb_visual yes
+own_window_argb_value 0
+#own_window_type desktop
+#own_window_transparent yes
+
+border_width 0
+stippled_borders 0
+update_interval 1
+uppercase no
+use_spacer none
+show_graph_scale no
+show_graph_range no
+
+draw_graph_borders no
+
+default_color black
+default_outline_color white
+default_color 000000
+draw_shades no
+default_shade_color 000000
+
+use_xft yes
+xftfont DejaVu Sans Mono:size=16
+
+color0 555555
+color1 999999
+color2 2a2a2a
+color9 525276
+
+TEXT
+${color9}${font DejaVu Sans Mono:size=68,weight:bold}${time %H:%M:%S}${font}
+${color2}${font DejaVu Sans Mono:size=42}${time %A}${font} 
+${color2}${font DejaVu Sans Mono:size=24}${time %B, %d}${font} 
+${color0}_______________________________________________________________________
+${color0}${offset 100}[${mpd_status} - ${mpd_elapsed}/${mpd_length}]
+${color0}${scroll 40 15 ${mpd_smart}}
+${color0}_______________________________________________________________________
+${color0}RAM $memperc% | CPU $cpu%
+${color0}_______________________________________________________________________
+
+${texeci 60 ~/opt/n/bin/node ~/sources/vk-node/index.js}
+

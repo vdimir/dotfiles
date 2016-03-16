@@ -1,0 +1,37 @@
+{
+	"always_show_minimap_viewport": true,
+	"bold_folder_labels": true,
+	"color_scheme": "Packages/Predawn Monokai/Predawn Monokai.tmTheme",
+	"folder_exclude_patterns":
+	[
+		".svn",
+		".git",
+		".hg",
+		"CVS",
+		"target"
+	],
+	"font_size": 11,
+	"highlight_line": true,
+	"hot_exit": false,
+	"ignored_packages":
+	[
+		"SublimeLinter",
+		"SublimeLinter-annotations",
+		"SublimeLinter-contrib-rustc",
+		"Vintage"
+	],
+	"predawn_tabs_active_underline": false,
+	"predawn_tabs_small": true,
+	"preview_on_click": true,
+	"remember_open_files": true,
+	"rulers":
+	[
+		99
+	],
+	"save_on_focus_lost": true,
+	"scroll_past_end": true,
+	"shift_tab_unindent": true,
+	"tab_size": 4,
+	"theme": "predawn-DEV.sublime-theme",
+	"translate_tabs_to_spaces": true
+}

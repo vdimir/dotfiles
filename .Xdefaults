@@ -1,0 +1,65 @@
+
+Xft.dpi: 96
+Xft.hinting: 1
+Xft.hintstyle: hintfull
+!Xft.autohint: 0
+!! lcdnone, lcddefault, lcdlight, lcdlegacy
+Xft.lcdfilter: lcddefault
+Xft.rgba: rgb
+Xft.antiatlas: 1
+
+URxvt.depth: 32
+URxvt.scrollBar: false
+
+URxvt.font: xft:DejaVu Sans Mono:size=10.5
+URxvt.letterSpace: -2
+URxvt.lineSpace: 0
+!Urxvt.internalBorder: 2
+
+URxvt*cursorUnderline: true
+!URxvt.cursorBlink: true
+
+URxvt.borderColor: #1D1F21
+URxvt.background: #1D1F21
+URxvt.foreground: #ffffff
+URxvt.color0  : #000000
+URxvt.color8  : #222222
+URxvt.color1  : #AA0000
+URxvt.color9  : #FF5555
+URxvt.color2  : #609900
+URxvt.color10 : #55FF55
+URxvt.color3  : #AA5500
+URxvt.color11 : #FFFF55
+URxvt.color4  : #0000AA
+URxvt.color12 : #5555FF
+URxvt.color5  : #AA00AA
+URxvt.color13 : #FF55FF
+URxvt.color6  : #00AAAA
+URxvt.color14 : #55FFFF
+URxvt.color7  : #AAAAAA
+URxvt.color15 : #FFFFFF
+
+URxvt.perl-ext-common:  default,tabbedex
+URxvt.tabbed.autohide: true
+URxvt.tabbed.tabbar-fg: 7
+URxvt.tabbed.tabbar-bg: 8
+URxvt.tabbed.tab-fg: 15
+URxvt.tabbed.tab-bg: 8
+URxvt.tabbed.title: no
+URxvt.tabbed.new-button: no
+
+URxvt.keysym.M-Down    : \033
+URxvt.keysym.M-Up      : \033
+URxvt.keysym.C-Down    : \033
+URxvt.keysym.C-Up      : \033
+URxvt.keysym.C-Right   : \033
+URxvt.keysym.C-Left    : \
+
+
+URxvt.keysym.Home: \033[1~
+URxvt.keysym.End: \033[4~
+URxvt.keysym.KP_Home: \033[1~
+URxvt.keysym.KP_End:  \033[4~
+
+!URxvt.keysym.M-C-Down  : \033
+!URxvt.keysym.M-C-Up    : \033

@@ -1,4 +1,4 @@
-alignment top_middle
+alignment top_left
 background yes
 xftalpha 0.8
 
@@ -8,11 +8,11 @@ draw_borders no
 draw_graph_borders yes
 draw_outline no
 
-gap_x 0
-gap_y 50
+gap_x 20
+gap_y 20
 
 minimum_size 5 5
-maximum_width 500
+maximum_width 450
 
 net_avg_samples 2
 
@@ -45,26 +45,27 @@ default_color black
 default_outline_color white
 default_color 000000
 draw_shades no
-default_shade_color 000000
+default_shade_color 32A0Ad
 
 use_xft yes
-xftfont DejaVu Sans Mono:size=16
+xftfont DejaVu Sans Mono:size=14
 
-color0 555555
-color1 999999
-color2 2a2a2a
-color9 525276
+color2 4a4b60
+color9 4a4b60
+color0 4a4b60
 
 TEXT
-${color9}${font DejaVu Sans Mono:size=68,weight:bold}${time %H:%M:%S}${font}
-${color2}${font DejaVu Sans Mono:size=42}${time %A}${font} 
-${color2}${font DejaVu Sans Mono:size=24}${time %B, %d}${font} 
-${color0}_______________________________________________________________________
-${color0}${offset 100}[${mpd_status} - ${mpd_elapsed}/${mpd_length}]
-${color0}${scroll 40 15 ${mpd_smart}}
-${color0}_______________________________________________________________________
-${color0}RAM $memperc% | CPU $cpu%
-${color0}_______________________________________________________________________
+${color9}${font DejaVu Sans Mono:size=70,weight:bold}${time %H:%M:%S}${font}
+${color0}
+${color2}${font DejaVu Sans Mono:size=30}${time %d %B,%A}${font}
+#${color2}${font DejaVu Sans Mono:size=24}${time %B, %d}${font}
+#${color0}______________________________________
+#${color0}${offset 100}[${mpd_status} - ${mpd_elapsed}/${mpd_length}]
+#${color0}${scroll 30 10 ${mpd_smart}}
+#${color0}____________________________
 
-${texeci 60 ~/opt/n/bin/node ~/sources/vk-node/index.js}
+${alignr}${color0}RAM $memperc% | CPU $cpu%
+#${color0}______________________
+${alignr}${texeci 60 ~/opt/n/bin/node ~/sources/vk-node/index.js}
+#${color0}________________
 

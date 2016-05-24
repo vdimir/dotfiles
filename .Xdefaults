@@ -11,7 +11,7 @@ Xft.antiatlas: 1
 URxvt.depth: 32
 URxvt.scrollBar: false
 
-URxvt.font: xft:DejaVu Sans Mono:size=10.5
+URxvt.font: xft:DejaVu Sans Mono for Powerline:size=10.5
 URxvt.letterSpace: -2
 URxvt.lineSpace: 0
 !Urxvt.internalBorder: 2
@@ -23,7 +23,7 @@ URxvt.borderColor: #1D1F21
 URxvt.background: #1D1F21
 URxvt.foreground: #ffffff
 URxvt.color0  : #000000
-URxvt.color8  : #222222
+URxvt.color8  : #555555
 URxvt.color1  : #AA0000
 URxvt.color9  : #FF5555
 URxvt.color2  : #609900

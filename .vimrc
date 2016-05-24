@@ -8,7 +8,11 @@ Plugin 'jeffkreeftmeijer/vim-numbertoggle'
 Plugin 'scrooloose/nerdtree'
 Plugin 'rust-lang/rust.vim'
 Plugin 'Valloric/YouCompleteMe'
-
+"Plugin 'eagletmt/neco-ghc'
+Plugin 'dhruvasagar/vim-table-mode'
+" Plugin 'godlygeek/tabular'
+" Plugin 'plasticboy/vim-markdown'
+"
 "Plugin 'timonv/vim-cargo'
 "Plugin 'airblade/vim-gitgutter'
 "Plugin 'tpope/vim-fugitive'
@@ -16,17 +20,31 @@ Plugin 'mhinz/vim-signify'
 Plugin 'vim-airline/vim-airline'
 Plugin 'vim-airline/vim-airline-themes'
 
-"Plugin 'lornix/vim-scrollbar'
 
-Plugin 'bling/vim-bufferline'
+"Plugin 'bling/vim-bufferline'
 Plugin 'scrooloose/syntastic'
 Plugin 'SirVer/ultisnips'
 Plugin 'honza/vim-snippets'
 
+Plugin 'lervag/vimtex'
 "Plugin 'sjl/badwolf'
 Plugin 'altercation/vim-colors-solarized'
 "Plugin 'racer-rust/vim-racer'
 call vundle#end()
+
+set keymap=russian-jcukenwin
+set iminsert=0
+set imsearch=0
+highlight lCursor guifg=NONE guibg=Cyan
+
+inoremap <C-l> <C-^>
+inoremap <C-x> <C-^>
+
+set spell
+setlocal spell spelllang=ru_ru,en_us
+
+autocmd FocusGained * :redraw!
+"autocmd BufEnter * :redraw!
 
 filetype plugin indent on
 syntax on
@@ -99,7 +117,7 @@ set sidescrolloff=5
 set showcmd
 set ruler
 
-"set colorcolumn=99
+set colorcolumn=99
 
 "let &t_SI = "\<Esc>]50;CursorShape=1;BlinkingCursorEnabled=1\x7"
 ""let &t_SR = "\<Esc>]50;CursorShape=2\x7"
@@ -120,7 +138,7 @@ set visualbell
 
 set wildmenu
 
-set lazyredraw
+"set lazyredraw
 
 "set backup
 "set backupdir="/home/deffe/.vim-bcp"
@@ -128,6 +146,10 @@ set noswapfile
 nnoremap <silent> <cr> :nohlsearch<cr><cr>
 nnoremap E $
 let g:rust_fold = 1
+
+let g:haskellmode_completion_ghc = 0
+autocmd FileType haskell setlocal omnifunc=necoghc#omnifunc
+let g:ycm_semantic_triggers = {'haskell' : ['.']}
 
 nnoremap B ^
 map <C-n> :NERDTreeToggle<CR>
@@ -152,3 +174,4 @@ set showcmd
 set background=dark
 colorscheme atom-dark
 let g:airline_theme='hybrid'
+

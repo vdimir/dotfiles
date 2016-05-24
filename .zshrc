@@ -91,7 +91,7 @@ bindkey '^[[A' up-line-or-search
 bindkey '^[[B' down-line-or-search
 bindkey '\e[3~' delete-char
 
-export PATH=$PATH:~/opt/bin:./node_modules/.bin:~/opt/rust/bin:~/.multirust/toolchains/stable/cargo/bin
+export PATH=$PATH:~/opt/bin:./node_modules/.bin:~/opt/rust/bin:~/.multirust/toolchains/stable/cargo/bin:~/.cabal/bin/
 export RUST_SRC_PATH=~/sources/rust/rustc-1.7.0/src
 #export LD_LIBRARY_PATH=~/opt/rust/rustc/lib:$LD_LIBRARY_PATH
 

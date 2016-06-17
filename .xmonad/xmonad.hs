@@ -1,55 +1,127 @@
+import System.IO
+import Data.Ratio((%))
+
 import XMonad
 import XMonad.Hooks.EwmhDesktops
-import XMonad.Util.EZConfig
 import XMonad.Hooks.ManageDocks
+import XMonad.Hooks.DynamicLog
+import XMonad.Hooks.FadeInactive
+import XMonad.Hooks.UrgencyHook
+import XMonad.Hooks.ManageHelpers
+import XMonad.Hooks.SetWMName
+import XMonad.Hooks.Place
+
+import XMonad.Util.EZConfig
+import XMonad.Util.Run(spawnPipe)
+
 import XMonad.Layout.NoBorders
 import XMonad.Layout.Spacing
 import XMonad.Layout.Tabbed
 import XMonad.Layout.StackTile
 import XMonad.Layout.PerWorkspace
-import XMonad.Util.Run(spawnPipe)
-import XMonad.Hooks.DynamicLog
-import System.IO
+import XMonad.Layout.SimplestFloat
+import XMonad.Layout.Gaps
+import XMonad.Layout.Mosaic
 
-defaultLayout = (avoidStruts $ smartBorders (tiled ||| Mirror tiled)) |||
-    noBorders Full |||
-    noBorders simpleTabbed
+import XMonad.Actions.CycleWS
+import XMonad.Actions.WindowBringer
+import XMonad.Actions.GridSelect
+import XMonad.Actions.FloatKeys
+
+import XMonad.Layout.MultiToggle
+
+import XMonad.Layout.MultiToggle.Instances(StdTransformers(MIRROR))
+
+import qualified XMonad.StackSet as W
+
+defaultLayout = (avoidStruts $ smartBorders $ mkToggle (single MIRROR) tiled)
+   ||| noBorders Full
+   -- ||| simplestFloat
+   -- ||| noBorders simpleTabbed
   where
     tiled = spacing 2 $ Tall nmaster delta ratio
-    nmaster = 1      -- The default number of windows in the master pane.
-    ratio   = 1/2    -- Default proportion of screen occupied by master pane.
-    delta   = 3/100  -- Percent of screen to increment by when resizing panes.
+    nmaster = 1
+    ratio   = 1/2
+    delta   = 3/100
 
-myLayout = 
-    onWorkspace "1:web" (tabbed ||| (avoidStruts $ tabbed)) $
+myLayout =
+    onWorkspace "F" simplestFloat $
     defaultLayout
   where
     tabbed = noBorders simpleTabbed
 
 myWorkspaces :: [String]
-myWorkspaces =  ["1:web","2:term"] ++ map show [3..5]
+myWorkspaces =  map show [1..3] ++ ["F"]
 
 color0 :: String
 color0 = "#456def"
 
+color1 :: String
+color1 = "#55555"
+
+modm :: KeyMask
+modm = mod4Mask
+
+spawnSelected' :: [(String, String)] -> X ()
+spawnSelected' lst = gridselect conf lst >>= flip whenJust spawn
+  where conf = defaultGSConfig
+
+gridRunProgs = [
+      ("Chromium", "chromium")
+    , ("SublimeText", "/home/deffe/opt/bin/sublime3")
+    , ("GVim", "gvim")
+    , ("Mathematica", "~/opt/Wolfram/10.0/Executables/Mathematica")
+    ]
+
 myKeys = [
-         ("M-q",     kill)
+          ((modm, xK_q),       kill)
+         , ((modm,               xK_x     ), sendMessage $ Toggle MIRROR)
+         , ((modm, xK_Left),    prevWS)
+         , ((modm, xK_Right),   nextWS)
+         , ((modm, xK_r), spawnSelected' gridRunProgs)
+         , ((modm, xK_w), goToSelected defaultGSConfig { gs_cellheight = 30, gs_cellwidth = 500 })
+         , ((0,   0x1008ff12  ), spawn "amixer -q sset Master toggle")
+         , ((0,   0x1008ff11  ), spawn "amixer -q sset Master 5%-")
+         , ((0,   0x1008ff13  ), spawn "amixer -q sset Master 5%+")
+         , ((0,   0x1008ff14  ), spawn "mpc toggle")
+         , ((0,   0x1008ff15  ), spawn "mpc stop")
+         , ((0,   0x1008ff16  ), spawn "mpc prev")
+         , ((0,   0x1008ff17  ), spawn "mpc next")
          ]
+
+
+myManageHook = composeAll
+   [
+   className =? "chromium-browser"      --> (doShift $ myWorkspaces !! 1)
+   , className =? "XMathematica"      --> (doFloat)
+   , manageDocks
+   ]
+
+myFadeHook :: X ()
+myFadeHook = return () -- fadeInactiveLogHook 0.9
 
 main = do
     xmproc <- spawnPipe "xmobar"
     xmonad $ defaultConfig
-        { modMask = mod4Mask
-        , terminal = "urxvt"
-        , workspaces           = myWorkspaces
-        , borderWidth          = 1
-        , normalBorderColor = "#abc123"
-        , focusedBorderColor = color0
-        , handleEventHook    = fullscreenEventHook
-        , layoutHook = myLayout
-        , logHook = dynamicLogWithPP xmobarPP
-                        { ppOutput = hPutStrLn xmproc
-                        , ppTitle = xmobarColor color0 "" . shorten 50
-                        }
-        } `additionalKeysP` myKeys
+        { modMask             = modm
+        , terminal            = "urxvt"
+        , workspaces          = myWorkspaces
+        , borderWidth         = 1
+        , normalBorderColor   = color1
+        , focusedBorderColor  = color0
+        , handleEventHook     = fullscreenEventHook
+        , layoutHook          = myLayout
+        , manageHook          = myManageHook <+> manageHook defaultConfig
+        , logHook             = myFadeHook <+> dynamicLogWithPP xmobarPP
+            { ppOutput = hPutStrLn xmproc
+            , ppTitle = xmobarColor color0 "" . shorten 50
+            , ppSep = " > "
+            , ppWsSep = " | "
+            , ppLayout  = (\ x -> case x of
+              "Mirror Spacing 2 Tall"          -> "[H]"
+              "SimplestFloat"                  -> "[~]"
+              "Spacing 2 Tall"                 -> "[V]"
+              _                                -> x )
+            }
+        } `additionalKeys` myKeys
 

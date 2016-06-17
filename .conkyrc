@@ -1,4 +1,4 @@
-alignment top_left
+alignment top_middle
 background yes
 xftalpha 0.8
 
@@ -11,7 +11,7 @@ draw_outline no
 gap_x 20
 gap_y 20
 
-minimum_size 5 5
+minimum_size 450 500
 maximum_width 450
 
 net_avg_samples 2
@@ -20,16 +20,16 @@ out_to_console no
 out_to_stderr no
 extra_newline no
 
-no_buffers yes
+#no_buffers yes
 double_buffer yes
-
+#
 own_window yes
-own_window_title conky
-own_window_hints undecorated,below,sticky,skip_taskbar,skip_pager
-own_window_argb_visual yes
-own_window_argb_value 0
-#own_window_type desktop
-#own_window_transparent yes
+#own_window_title conky
+#own_window_hints undecorated,below,sticky,skip_taskbar,skip_pager
+#own_window_argb_visual yes
+#own_window_argb_value 0
+own_window_type override
+own_window_transparent yes
 
 border_width 0
 stippled_borders 0
@@ -50,22 +50,20 @@ default_shade_color 32A0Ad
 use_xft yes
 xftfont DejaVu Sans Mono:size=14
 
-color2 4a4b60
-color9 4a4b60
-color0 4a4b60
+color0 aaaaaa
+color1 555555
 
 TEXT
-${color9}${font DejaVu Sans Mono:size=70,weight:bold}${time %H:%M:%S}${font}
-${color0}
-${color2}${font DejaVu Sans Mono:size=30}${time %d %B,%A}${font}
-#${color2}${font DejaVu Sans Mono:size=24}${time %B, %d}${font}
-#${color0}______________________________________
-#${color0}${offset 100}[${mpd_status} - ${mpd_elapsed}/${mpd_length}]
-#${color0}${scroll 30 10 ${mpd_smart}}
-#${color0}____________________________
 
-${alignr}${color0}RAM $memperc% | CPU $cpu%
-#${color0}______________________
-${alignr}${texeci 60 ~/opt/n/bin/node ~/sources/vk-node/index.js}
+${alignc}${color0}${font DejaVu Sans Mono:size=70,weight:bold}${time %H:%M:%S}${font}
+${color0}
+${color0}${font DejaVu Sans Mono:size=28}${time %A}${alignr} ${time %B, %d}${font}
+${color0}
+
+${color1}${exec ~/curvol.sh} #
+${if_mpd_playing}#
+${alignc}${color1}${scroll 20 3 ${mpd_smart}}${alignr}[${mpd_elapsed}/${mpd_length}]
+${endif}#
+  ${texeci 6 ~/opt/n/bin/node ~/sources/vk-node/index.js}
 #${color0}________________
 

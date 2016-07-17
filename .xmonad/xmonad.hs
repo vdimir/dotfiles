@@ -32,14 +32,18 @@ import XMonad.Layout.MultiToggle
 
 import XMonad.Layout.MultiToggle.Instances(StdTransformers(MIRROR))
 
+import XMonad.Layout.MultiColumns
+
 import qualified XMonad.StackSet as W
 
+
+windowSpacing :: Int
+windowSpacing = 1
+
 defaultLayout = (avoidStruts $ smartBorders $ mkToggle (single MIRROR) tiled)
-   ||| noBorders Full
-   -- ||| simplestFloat
-   -- ||| noBorders simpleTabbed
-  where
-    tiled = spacing 2 $ Tall nmaster delta ratio
+   ||| noBorders Full 
+   where
+    tiled = spacing windowSpacing $ Tall nmaster delta ratio
     nmaster = 1
     ratio   = 1/2
     delta   = 3/100
@@ -51,16 +55,7 @@ myLayout =
     tabbed = noBorders simpleTabbed
 
 myWorkspaces :: [String]
-myWorkspaces =  map show [1..3] ++ ["F"]
-
-color0 :: String
-color0 = "#456def"
-
-color1 :: String
-color1 = "#55555"
-
-modm :: KeyMask
-modm = mod4Mask
+myWorkspaces =  map show [1..5] ++ ["F"]
 
 spawnSelected' :: [(String, String)] -> X ()
 spawnSelected' lst = gridselect conf lst >>= flip whenJust spawn
@@ -69,6 +64,7 @@ spawnSelected' lst = gridselect conf lst >>= flip whenJust spawn
 gridRunProgs = [
       ("Chromium", "chromium")
     , ("SublimeText", "/home/deffe/opt/bin/sublime3")
+    , ("Dolphin", "dolphin")
     , ("GVim", "gvim")
     , ("Mathematica", "~/opt/Wolfram/10.0/Executables/Mathematica")
     ]
@@ -92,13 +88,22 @@ myKeys = [
 
 myManageHook = composeAll
    [
-   className =? "chromium-browser"      --> (doShift $ myWorkspaces !! 1)
-   , className =? "XMathematica"      --> (doFloat)
+  -- className =? "chromium-browser"      --> (doShift $ myWorkspaces !! 1)
+   className =? "XMathematica"      --> (doFloat)
    , manageDocks
    ]
 
 myFadeHook :: X ()
-myFadeHook = return () -- fadeInactiveLogHook 0.9
+myFadeHook = fadeInactiveLogHook 0.9
+
+color0 :: String
+color0 = "#D8BC2C"
+
+color1 :: String
+color1 = "#55555"
+
+modm :: KeyMask
+modm = mod4Mask
 
 main = do
     xmproc <- spawnPipe "xmobar"
@@ -118,9 +123,11 @@ main = do
             , ppSep = " > "
             , ppWsSep = " | "
             , ppLayout  = (\ x -> case x of
+              "Mirror Spacing 1 Tall"          -> "[H]"
               "Mirror Spacing 2 Tall"          -> "[H]"
-              "SimplestFloat"                  -> "[~]"
+              "Spacing 1 Tall"                 -> "[V]"
               "Spacing 2 Tall"                 -> "[V]"
+              "SimplestFloat"                  -> "[~]"
               _                                -> x )
             }
         } `additionalKeys` myKeys

@@ -5,6 +5,7 @@ xsetroot -cursor_name left_ptr &
 setxkbmap -option caps:escape
 conky &
 xcompmgr &
+kbdd &
 
 synclient HorizTwoFingerScroll=1
 synclient PalmDetect=1

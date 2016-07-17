@@ -75,6 +75,7 @@ alias -g C='|wc -l'
 alias gis='git status'
 alias svim='sudoedit' 
 alias sapt='sudo aptitude'
+alias cal='ncal -C'
 
 bindkey '5D' backward-word
 bindkey '5C' forward-word

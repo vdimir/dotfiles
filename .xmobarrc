@@ -1,4 +1,4 @@
-Config { font = "xft:DejaVu Sans Mono for Powerline:size=10"
+Config { font = "-xos4-terminus-medium-r-normal-*-16-*-*-*-*-*-*-*"
         , borderColor = "black"
         , border = TopB
         , bgColor = "#1D1F21"

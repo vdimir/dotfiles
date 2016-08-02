@@ -73,9 +73,6 @@ alias -g L='|less'
 alias -g C='|wc -l'
 
 alias gis='git status'
-alias svim='sudoedit' 
-alias sapt='sudo aptitude'
-alias cal='ncal -C'
 
 bindkey '5D' backward-word
 bindkey '5C' forward-word
@@ -92,9 +89,8 @@ bindkey '^[[A' up-line-or-search
 bindkey '^[[B' down-line-or-search
 bindkey '\e[3~' delete-char
 
-export PATH=$PATH:~/opt/bin:./node_modules/.bin:~/opt/rust/bin:~/.multirust/toolchains/stable/cargo/bin:~/.cabal/bin/
-export RUST_SRC_PATH=~/sources/rust/rustc-1.7.0/src
-#export LD_LIBRARY_PATH=~/opt/rust/rustc/lib:$LD_LIBRARY_PATH
+export PATH=$PATH:~/usr/bin
 
-export N_PREFIX="$HOME/opt/n"; [[ :$PATH: == *":$N_PREFIX/bin:"* ]] || PATH+=":$N_PREFIX/bin"  # Added by n-install (see http://git.io/n-install-repo).
+
+
 

@@ -11,10 +11,11 @@ Xft.antiatlas: 1
 
 URxvt.depth: 32
 URxvt.scrollBar: false
+URxvt.font: -*-terminus-medium-r-*-*-16-*-*-*-*-*-*-r
+URxvt.boldFont:	-*-terminus-bold-r-*-*-16-*-*-*-*-*-*-r
 
-URxvt.font: xft:Terminus:pixelsize=17
 !URxvt.letterSpace: -2
-URxvt.lineSpace: 0
+!URxvt.lineSpace: 0
 !Urxvt.internalBorder: 2
 
 !URxvt*cursorUnderline: true
@@ -40,6 +41,7 @@ URxvt.color14 : #55FFFF
 URxvt.color7  : #AAAAAA
 URxvt.color15 : #FFFFFF
 
+URxvt.perl-lib: /home/vdimir/.urxvt
 URxvt.perl-ext-common:  default,tabbedex
 URxvt.tabbed.autohide: true
 URxvt.tabbed.tabbar-fg: 7

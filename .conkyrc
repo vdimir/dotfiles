@@ -34,7 +34,7 @@ ${alignc}${color0}${font DejaVu Sans Mono:size=70,weight:bold}${time %H:%M:%S}${
 ${color0}
 ${color0}${font DejaVu Sans Mono:size=28}${time %A}${alignr} ${time %B, %d}${font}
 
-  ${texeci 6 node ~/scripts/vk-node-checker/index.js}
+  ${texeci 60 ~/scripts/check-vk.sh}
 
 ${color0}
 ]]

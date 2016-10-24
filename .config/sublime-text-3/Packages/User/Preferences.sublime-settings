@@ -1,20 +1,5 @@
 {
-
-	"font_face": "Consolas",
-	"font_options":
-	[
-		"gray_antialias",
-		"subpixel_antialias"
-	],
-
-    "save_on_focus_lost": true,
-	"font_size": 13,
-	"ignored_packages":
-	[
-		"Vintage"
-	],
 	"always_show_minimap_viewport": true,
-	"bold_folder_labels": true,
 	"folder_exclude_patterns":
 	[
 		".svn",
@@ -23,14 +8,30 @@
 		"CVS",
 		"target"
 	],
+	"font_face": "Consolas",
+	"font_options":
+	[
+		"gray_antialias",
+		"subpixel_antialias"
+	],
+	"font_size": 13,
 	"highlight_line": true,
 	"hot_exit": false,
+	"ignored_packages":
+	[
+		"Vintage"
+	],
+	"predawn_tabs_small": true,
 	"preview_on_click": true,
 	"remember_open_files": true,
-	"rulers": [99],
+	"rulers":
+	[
+		99
+	],
+	"save_on_focus_lost": true,
 	"scroll_past_end": true,
 	"shift_tab_unindent": true,
-	"spell_check": true,
+	"spell_check": false,
 	"tab_size": 4,
 	"translate_tabs_to_spaces": true
 }

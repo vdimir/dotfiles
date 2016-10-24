@@ -1,5 +1,6 @@
 import System.IO
 import Data.Ratio((%))
+import Control.Monad (liftM2)
 
 import XMonad
 import XMonad.Hooks.EwmhDesktops
@@ -37,13 +38,11 @@ import XMonad.Layout.MultiColumns
 import qualified XMonad.StackSet as W
 
 
-windowSpacing :: Int
-windowSpacing = 1
-
 defaultLayout = (avoidStruts $ smartBorders $ mkToggle (single MIRROR) tiled)
-   ||| noBorders Full 
+   ||| noBorders Full
    where
     tiled = spacing windowSpacing $ Tall nmaster delta ratio
+    windowSpacing = 0
     nmaster = 1
     ratio   = 1/2
     delta   = 3/100
@@ -63,10 +62,10 @@ spawnSelected' lst = gridselect conf lst >>= flip whenJust spawn
 
 gridRunProgs = [
       ("Chromium", "chromium")
-    , ("SublimeText", "/home/deffe/opt/bin/sublime3")
+    , ("SublimeText", "~/usr/bin/sublime-text")
     , ("Dolphin", "dolphin")
     , ("GVim", "gvim")
-    , ("Mathematica", "~/opt/Wolfram/10.0/Executables/Mathematica")
+    --, ("Mathematica", "~/opt/Wolfram/10.0/Executables/Mathematica")
     ]
 
 myKeys = [
@@ -74,7 +73,8 @@ myKeys = [
          , ((modm,               xK_x     ), sendMessage $ Toggle MIRROR)
          , ((modm, xK_Left),    prevWS)
          , ((modm, xK_Right),   nextWS)
-         , ((modm, xK_r), spawnSelected' gridRunProgs)
+         -- , ((modm, xK_r), spawnSelected' gridRunProgs)
+          , ((modm, xK_r), spawn "~/scripts/dmenu_recent.sh")
          , ((modm, xK_w), goToSelected defaultGSConfig { gs_cellheight = 30, gs_cellwidth = 500 })
          , ((0,   0x1008ff12  ), spawn "amixer -q sset Master toggle")
          , ((0,   0x1008ff11  ), spawn "amixer -q sset Master 5%-")
@@ -88,28 +88,31 @@ myKeys = [
 
 myManageHook = composeAll
    [
-  -- className =? "chromium-browser"      --> (doShift $ myWorkspaces !! 1)
-   className =? "XMathematica"      --> (doFloat)
+ --  className =? "chromium-browser"      --> (doShift $ myWorkspaces !! 0)
+  -- , className =? "Telegram"      --> (viewShift $ myWorkspaces !! 0)
+   --className =? "XMathematica"      --> (doFloat)
+    className =? "stalonetray"    --> doIgnore
    , manageDocks
    ]
+--     where viewShift = doF . liftM2 (.) W.greedyView W.shift
 
 myFadeHook :: X ()
 myFadeHook = fadeInactiveLogHook 0.9
 
 color0 :: String
-color0 = "#D8BC2C"
+color0 = "#ffffff"
 
 color1 :: String
-color1 = "#55555"
+color1 = "black"
 
 modm :: KeyMask
 modm = mod4Mask
 
 main = do
-    xmproc <- spawnPipe "xmobar"
+    xmproc <- spawnPipe "xmobar ~/.xmonad/xmobar.hs"
     xmonad $ defaultConfig
         { modMask             = modm
-        , terminal            = "urxvt"
+        , terminal            = "urxvt-256color"
         , workspaces          = myWorkspaces
         , borderWidth         = 1
         , normalBorderColor   = color1
@@ -119,14 +122,13 @@ main = do
         , manageHook          = myManageHook <+> manageHook defaultConfig
         , logHook             = myFadeHook <+> dynamicLogWithPP xmobarPP
             { ppOutput = hPutStrLn xmproc
+            , ppCurrent =  xmobarColor "white" "#4D5966" . wrap "[" "]"
             , ppTitle = xmobarColor color0 "" . shorten 50
             , ppSep = " > "
             , ppWsSep = " | "
             , ppLayout  = (\ x -> case x of
-              "Mirror Spacing 1 Tall"          -> "[H]"
-              "Mirror Spacing 2 Tall"          -> "[H]"
-              "Spacing 1 Tall"                 -> "[V]"
-              "Spacing 2 Tall"                 -> "[V]"
+              "Mirror Spacing 0 Tall"          -> "[H]"
+              "Spacing 0 Tall"          -> "[V]"
               "SimplestFloat"                  -> "[~]"
               _                                -> x )
             }

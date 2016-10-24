@@ -4,10 +4,10 @@ alignment='top_middle',
 background=false,
 gap_x=20,
 gap_y=50,
-maximum_width=500,
+maximum_width=600,
 double_buffer=true,
 
-own_window=true,
+-- own_window=true,
 own_window_type='dock',
 own_window_title='conky',
 --own_window_hints='undecorated,below,sticky,skip_taskbar,skip_pager',
@@ -27,14 +27,14 @@ default_shade_color='222222',
 color0='fefefe',
 color1='555555'
 
+-- ${texeci 6  ~/scripts/tasks.sh}
+-- ${texeci 60 ~/scripts/check-vk.sh}
 }
 
 conky.text = [[
 ${alignc}${color0}${font DejaVu Sans Mono:size=70,weight:bold}${time %H:%M:%S}${font}
 ${color0}
 ${color0}${font DejaVu Sans Mono:size=28}${time %A}${alignr} ${time %B, %d}${font}
-
-  ${texeci 60 ~/scripts/check-vk.sh}
 
 ${color0}
 ]]

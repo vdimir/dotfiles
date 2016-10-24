@@ -1,10 +1,11 @@
-feh --bg-center ./Pictures/wallhaven-69293.jpg &
+~/.fehbg &
 numlockx &
 xsetroot -cursor_name left_ptr &
 setxkbmap -option caps:escape
-# conky &
+conky &
 # xcompmgr &
 # kbdd &
+stalonetray &
 
 synclient HorizTwoFingerScroll=1
 synclient PalmDetect=1

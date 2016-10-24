@@ -38,7 +38,6 @@ mv "$recent_cache.$$"  "$recent_cache"
 # arguments, if any.
 word0=${cmd%% *}
 match="^$word0$"
-echo "$match"
 
 get_type () {
     while type=$(echo $known_types | xargs -n1 | $dmenu_cmd -p Type:); do
@@ -58,6 +57,8 @@ else
         type=$(get_type)
     fi
 fi
+
+export PATH=$PATH:~/usr/bin
 
 [[ "$type" = "background" ]] && exec $cmd
 [[ "$type" = "terminal" ]] && exec $terminal "$cmd"

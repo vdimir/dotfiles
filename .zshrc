@@ -36,16 +36,16 @@ autoload -Uz vcs_info
 zstyle ':vcs_info:*' enable git 
 
 precmd() {
-   # tmux set -qg status-left "#S #P $(pwd)"
+    #tmux set -qg status-left "#S #P $(pwd)"
     #vcs_info
     rehash
 }
 
 autoload -U colors && colors
 #zstyle ':vcs_info:git*' formats " %b %m%u%c"
-zstyle ':vcs_info:git*' formats "%{$reset_color%}%b%{$reset_color%} %m%u%c%{$reset_color%}"
+zstyle ':vcs_info:git*' formats "%{$reset_color%}(%b%{$reset_color%} %m%u%c%{$reset_color%})"
 zstyle ':vcs_info:*' check-for-changes true
-PROMPT=$' %{\e[1;34m%}%~ ${vcs_info_msg_0_}%{\e[1;34m%}%#%{\e[0m%} '
+PROMPT=$' %{\e[1;34m%}%(5~|%-1~/.../%2~|%~) ${vcs_info_msg_0_}%{\e[1;34m%}%#%{\e[0m%} '
 RPROMPT='%T'
 
 alias ls='ls --group-directories-first --color=auto'
@@ -73,6 +73,7 @@ alias -g L='|less'
 alias -g C='|wc -l'
 
 alias gis='git status'
+alias cal='cal -m'
 
 bindkey '5D' backward-word
 bindkey '5C' forward-word
@@ -90,7 +91,10 @@ bindkey '^[[B' down-line-or-search
 bindkey '\e[3~' delete-char
 
 export PATH=$PATH:~/usr/bin
+export PATH=/home/vdimir/usr/anacona3/bin:$PATH
+export PATH=/home/vdimir/.local/bin:$PATH
 
+export LANG=en_US.UTF-8
 
-
+stty -ixon
 

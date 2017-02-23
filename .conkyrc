@@ -2,13 +2,13 @@ conky.config = {
 
 alignment='top_middle',
 background=false,
-gap_x=20,
+gap_x=650,
 gap_y=50,
 maximum_width=600,
 double_buffer=true,
 
--- own_window=true,
-own_window_type='dock',
+own_window=true,
+-- own_window_type='dock',
 own_window_title='conky',
 --own_window_hints='undecorated,below,sticky,skip_taskbar,skip_pager',
 own_window_argb_visual=true,
@@ -36,5 +36,6 @@ ${alignc}${color0}${font DejaVu Sans Mono:size=70,weight:bold}${time %H:%M:%S}${
 ${color0}
 ${color0}${font DejaVu Sans Mono:size=28}${time %A}${alignr} ${time %B, %d}${font}
 
+${alignr}${texeci 600 ~/scripts/check-vk.sh}
 ${color0}
 ]]

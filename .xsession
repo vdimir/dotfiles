@@ -4,7 +4,7 @@ xsetroot -cursor_name left_ptr &
 setxkbmap -option caps:escape
 conky &
 # xcompmgr &
-# kbdd &
+kbdd &
 stalonetray &
 
 synclient HorizTwoFingerScroll=1

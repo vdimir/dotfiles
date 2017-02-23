@@ -91,10 +91,19 @@ bindkey '^[[B' down-line-or-search
 bindkey '\e[3~' delete-char
 
 export PATH=$PATH:~/usr/bin
-export PATH=/home/vdimir/usr/anacona3/bin:$PATH
+export PATH=$PATH:./node_modules/.bin
+# export PATH=/home/vdimir/usr/anacona3/bin:$PATH
+export PYTHONPATH=/home/vdimir/usr/xgb/lib/python:/home/vdimir/usr/anacona3/lib:$PYTHONPATH
+# export PATH=/home/vdimir/usr/anaconda2/bin:$PATH
 export PATH=/home/vdimir/.local/bin:$PATH
 
 export LANG=en_US.UTF-8
 
 stty -ixon
+# eval $(thefuck --alias)
 
+autoload -U +X compinit && compinit
+autoload -U +X bashcompinit && bashcompinit
+eval "$(stack --bash-completion-script stack)"
+
+export TERM=xterm-256color

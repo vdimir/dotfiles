@@ -1,2 +1,2 @@
 #!/bin/bash
-node ~/sources/vk-node-checker/index.js
+node ~/userdata2/sources/vk-node-checker/index.js

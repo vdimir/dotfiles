@@ -2,6 +2,7 @@
 
 # Originally based on code by Dieter Plaetinck.
 # Pretty much re-written by Mina Nagy (mnzaki)
+DMENU_OPTIONS="-fn -*-terminus-*-*-*-*-*-*-*-*-*-*-*-*"
 
 dmenu_cmd="dmenu $DMENU_OPTIONS"
 terminal="urxvt -e"

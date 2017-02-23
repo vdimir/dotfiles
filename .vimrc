@@ -7,8 +7,8 @@ set rtp+=~/.vim/bundle/Vundle.vim
 call vundle#begin()
 Plugin 'VundleVim/Vundle.vim'
 
+Plugin 'jeffkreeftmeijer/vim-numbertoggle'
 Plugin 'scrooloose/nerdtree'
-"Plugin 'jeffkreeftmeijer/vim-numbertoggle'
 Plugin 'airblade/vim-gitgutter'
 Plugin 'vim-airline/vim-airline'
 Plugin 'vim-airline/vim-airline-themes'
@@ -20,25 +20,39 @@ Plugin 'jpalardy/vim-slime'
 
 Plugin 'Shougo/neocomplete.vim'
 Plugin 'eagletmt/neco-ghc'
-Plugin 'Twinside/vim-haskellConceal'
+"Plugin 'Twinside/vim-haskellConceal'
 
-" Plugin 'let-def/vimbufsync'
-" Plugin 'the-lambda-church/coquille'
+Plugin 'scrooloose/nerdcommenter'
+
+Plugin 'terryma/vim-multiple-cursors'
+"Plugin 'paradigm/vim-multicursor'
 call vundle#end()
+
+map L $
+map H ^
 
 inoremap <expr><TAB>  pumvisible() ? "\<C-n>" : "\<TAB>"
 
-" let g:neocomplete#enable_auto_select = 1
+let g:neocomplete#enable_at_startup = 1
 
 inoremap <expr><C-Space> pumvisible() ? "\<C-Space>" : "\<C-n>"
 
 let g:haddock_browser="chromium"
 let g:necoghc_enable_detailed_browse = 1
 
+
+let g:NERDTrimTrailingWhitespace = 1
+let g:NERDSpaceDelims = 1
+let g:NERDAltDelims_haskell = 1
+
+nnoremap <c-_> :call NERDComment('n',"toggle")<CR>j
+vnoremap <c-_> :call NERDComment('x',"toggle")<CR>
+
 set wildignore+=*/node_modules/*
 
 let g:slime_target = "tmux"
 nmap <c-c><c-l> :SlimeSend0 "<c-l>"<CR>
+nmap <c-c><c-x> :SlimeSend0 ":r"<CR>
 imap <C-c> <ESC>:SlimeSend<CR>
 let g:slime_dont_ask_default = 1
 
@@ -100,7 +114,7 @@ set wildmenu
 set noswapfile
 nnoremap <silent> <cr> :nohlsearch<cr><cr>
 
-map <C-n> :NERDTreeToggle<CR>
+map <C-d> :NERDTreeToggle<CR>
 
 let g:NumberToggleTrigger="<F2>"
 set number
@@ -113,5 +127,7 @@ inoremap <C-s> <ESC>:update<cr>
 
 set showcmd
 
-"colorscheme distinguished
-colorscheme molokai
+set t_ut=
+
+colorscheme distinguished
+"colorscheme molokai

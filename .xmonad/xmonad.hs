@@ -35,12 +35,16 @@ import XMonad.Layout.MultiToggle.Instances(StdTransformers(MIRROR))
 
 import XMonad.Layout.MultiColumns
 
+import XMonad.Layout.IndependentScreens
+
 import qualified XMonad.StackSet as W
 
 
-defaultLayout = (avoidStruts $ smartBorders $ mkToggle (single MIRROR) tiled)
-   ||| noBorders Full
+defaultLayout = (smartBorders lay) |||
+                (avoidStruts $ smartBorders $ lay) |||
+                (noBorders Full)
    where
+    lay = mkToggle (single MIRROR) tiled
     tiled = spacing windowSpacing $ Tall nmaster delta ratio
     windowSpacing = 0
     nmaster = 1
@@ -53,8 +57,6 @@ myLayout =
   where
     tabbed = noBorders simpleTabbed
 
-myWorkspaces :: [String]
-myWorkspaces =  map show [1..5] ++ ["F"]
 
 spawnSelected' :: [(String, String)] -> X ()
 spawnSelected' lst = gridselect conf lst >>= flip whenJust spawn
@@ -79,19 +81,19 @@ myKeys = [
          , ((0,   0x1008ff12  ), spawn "amixer -q sset Master toggle")
          , ((0,   0x1008ff11  ), spawn "amixer -q sset Master 5%-")
          , ((0,   0x1008ff13  ), spawn "amixer -q sset Master 5%+")
-         , ((0,   0x1008ff14  ), spawn "mpc toggle")
-         , ((0,   0x1008ff15  ), spawn "mpc stop")
-         , ((0,   0x1008ff16  ), spawn "mpc prev")
-         , ((0,   0x1008ff17  ), spawn "mpc next")
+         , ((0,   0x1008ff14  ), spawn "deadbeef --play-pause")
+         , ((0,   0x1008ff15  ), spawn "deadbeef --stop")
+         , ((0,   0x1008ff16  ), spawn "deadbeef --prev")
+         , ((0,   0x1008ff17  ), spawn "deadbeef --next")
          ]
 
 
 myManageHook = composeAll
    [
- --  className =? "chromium-browser"      --> (doShift $ myWorkspaces !! 0)
-  -- , className =? "Telegram"      --> (viewShift $ myWorkspaces !! 0)
-   --className =? "XMathematica"      --> (doFloat)
-    className =? "stalonetray"    --> doIgnore
+     className =? "stalonetray"    --> doIgnore
+   -- , className =? "chromium-browser"      --> (doShift $ myWorkspaces !! 0)
+   -- , className =? "Telegram"      --> (viewShift $ myWorkspaces !! 0)
+   -- , className =? "XMathematica"      --> (doFloat)
    , manageDocks
    ]
 --     where viewShift = doF . liftM2 (.) W.greedyView W.shift
@@ -108,19 +110,24 @@ color1 = "black"
 modm :: KeyMask
 modm = mod4Mask
 
+myWorkspaces :: [String]
+myWorkspaces =  map show [1..5] ++ ["F"]
+
 main = do
     xmproc <- spawnPipe "xmobar ~/.xmonad/xmobar.hs"
     xmonad $ defaultConfig
         { modMask             = modm
         , terminal            = "urxvt-256color"
         , workspaces          = myWorkspaces
+        -- , workspaces          = withScreens 2 myWorkspaces
         , borderWidth         = 1
         , normalBorderColor   = color1
         , focusedBorderColor  = color0
         , handleEventHook     = fullscreenEventHook
         , layoutHook          = myLayout
         , manageHook          = myManageHook <+> manageHook defaultConfig
-        , logHook             = myFadeHook <+> dynamicLogWithPP xmobarPP
+        , logHook             = dynamicLogWithPP xmobarPP
+        -- , logHook             = myFadeHook <+> dynamicLogWithPP xmobarPP
             { ppOutput = hPutStrLn xmproc
             , ppCurrent =  xmobarColor "white" "#4D5966" . wrap "[" "]"
             , ppTitle = xmobarColor color0 "" . shorten 50

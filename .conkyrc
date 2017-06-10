@@ -2,9 +2,9 @@ conky.config = {
 
 alignment='top_middle',
 background=false,
-gap_x=650,
+gap_x=1850,
 gap_y=50,
-maximum_width=600,
+maximum_width=500,
 double_buffer=true,
 
 own_window=true,
@@ -28,7 +28,6 @@ color0='fefefe',
 color1='555555'
 
 -- ${texeci 6  ~/scripts/tasks.sh}
--- ${texeci 60 ~/scripts/check-vk.sh}
 }
 
 conky.text = [[
@@ -36,6 +35,10 @@ ${alignc}${color0}${font DejaVu Sans Mono:size=70,weight:bold}${time %H:%M:%S}${
 ${color0}
 ${color0}${font DejaVu Sans Mono:size=28}${time %A}${alignr} ${time %B, %d}${font}
 
-${alignr}${texeci 600 ~/scripts/check-vk.sh}
+${alignr}${texeci 300 ~/scripts/check-vk.sh}
+${if_match "${exec deadbeef --nowplaying-tf "%isplaying%" 2>/dev/null }" >=  "1"}
+${execi 1 deadbeef --nowplaying-tf "\[%playback_time%/%length%]  %artist% - %title%"}
+$endif
+
 ${color0}
 ]]

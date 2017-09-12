@@ -2,7 +2,7 @@
 
 # Originally based on code by Dieter Plaetinck.
 # Pretty much re-written by Mina Nagy (mnzaki)
-DMENU_OPTIONS="-fn -*-terminus-*-*-*-*-*-*-*-*-*-*-*-*"
+#DMENU_OPTIONS="-fn -*-terminus-*-*-*-*-*-*-*-*-*-*-*-*"
 
 dmenu_cmd="dmenu $DMENU_OPTIONS"
 terminal="urxvt -e"
@@ -59,7 +59,7 @@ else
     fi
 fi
 
-export PATH=$PATH:~/usr/bin
+export PATH=$PATH:~/.local/bin
 
 [[ "$type" = "background" ]] && exec $cmd
 [[ "$type" = "terminal" ]] && exec $terminal "$cmd"

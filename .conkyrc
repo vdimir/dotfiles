@@ -8,9 +8,9 @@ maximum_width=500,
 double_buffer=true,
 
 own_window=true,
--- own_window_type='dock',
+own_window_type='dock',
 own_window_title='conky',
---own_window_hints='undecorated,below,sticky,skip_taskbar,skip_pager',
+own_window_hints='undecorated,below,sticky,skip_taskbar,skip_pager',
 own_window_argb_visual=true,
 own_window_argb_value=100,
 own_window_transparent=true,
@@ -27,18 +27,19 @@ default_shade_color='222222',
 color0='fefefe',
 color1='555555'
 
+-- ${if_match "${exec deadbeef --nowplaying-tf "%isplaying%" 2>/dev/null }" >=  "1"}
+-- ${execi 1 deadbeef --nowplaying-tf "\[%playback_time%/%length%]  %artist% - %title%"}
+-- $endif
+
+-- ${alignr}${texeci 300 ~/scripts/check-vk.sh}
 -- ${texeci 6  ~/scripts/tasks.sh}
 }
 
 conky.text = [[
-${alignc}${color0}${font DejaVu Sans Mono:size=70,weight:bold}${time %H:%M:%S}${font}
+${alignc}${color0}${font DejaVu Sans Mono:size=70:bold}${time %H:%M:%S}${font}
 ${color0}
 ${color0}${font DejaVu Sans Mono:size=28}${time %A}${alignr} ${time %B, %d}${font}
 
-${alignr}${texeci 300 ~/scripts/check-vk.sh}
-${if_match "${exec deadbeef --nowplaying-tf "%isplaying%" 2>/dev/null }" >=  "1"}
-${execi 1 deadbeef --nowplaying-tf "\[%playback_time%/%length%]  %artist% - %title%"}
-$endif
 
 ${color0}
 ]]

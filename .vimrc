@@ -131,3 +131,5 @@ set t_ut=
 
 colorscheme distinguished
 "colorscheme molokai
+"
+autocmd VimEnter,VimLeave * silent !tmux set status

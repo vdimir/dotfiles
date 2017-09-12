@@ -1,4 +1,4 @@
-Xcursor.theme: OpenZone_White_Slim
+!Xcursor.theme: OpenZone_White_Slim
 
 Xft.dpi: 96
 Xft.hinting: 1
@@ -11,10 +11,11 @@ Xft.antiatlas: 1
 
 URxvt.depth: 32
 URxvt.scrollBar: false
-URxvt.font: -*-terminus-medium-r-*-*-16-*-*-*-*-*-*-r
-URxvt.boldFont:	-*-terminus-bold-r-*-*-16-*-*-*-*-*-*-r
+URxvt.font: xft:DejaVu Sans Mono:pixelsize=13
+!URxvt.font: -*-terminus-medium-r-*-*-16-*-*-*-*-*-*-r
+!URxvt.boldFont:	-*-terminus-bold-r-*-*-16-*-*-*-*-*-*-r
 
-!URxvt.letterSpace: -2
+URxvt.letterSpace: -1
 !URxvt.lineSpace: 0
 !Urxvt.internalBorder: 2
 
@@ -41,8 +42,9 @@ URxvt.color14 : #55FFFF
 URxvt.color7  : #AAAAAA
 URxvt.color15 : #FFFFFF
 
-URxvt.perl-lib: /home/vdimir/.urxvt
-URxvt.perl-ext-common:  default,tabbedex
+!URxvt.perl-lib: /home/vdimir/.urxvt
+!URxvt.perl-ext-common:  default,tabbedex,vtwheel
+URxvt.perl-ext-common:  default,vtwheel
 URxvt.tabbed.autohide: true
 URxvt.tabbed.tabbar-fg: 7
 URxvt.tabbed.tabbar-bg: 8
@@ -51,13 +53,11 @@ URxvt.tabbed.tab-bg: 8
 URxvt.tabbed.title: no
 URxvt.tabbed.new-button: no
 
-URxvt.keysym.M-Down    : \033
-URxvt.keysym.M-Up      : \033
-URxvt.keysym.C-Down    : \033
-URxvt.keysym.C-Up      : \033
-URxvt.keysym.C-Right   : \033
-URxvt.keysym.C-Left    : \
 
+!URxvt.keysym.M-Down:        \033[1;3B
+!URxvt.keysym.M-Up:          \033[1;3A
+!URxvt.keysym.M-Right:       \033[1;3C
 
 !URxvt.keysym.M-C-Down  : \033
 !URxvt.keysym.M-C-Up    : \033
+

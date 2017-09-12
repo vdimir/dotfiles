@@ -3,6 +3,7 @@ HISTSIZE=1000
 SAVEHIST=1000
 
 fpath=(~/.zsh/site-functions $fpath) 
+# fpath+=~/.zfunc
 
 setopt HIST_IGNORE_ALL_DUPS
 setopt HIST_REDUCE_BLANKS
@@ -73,15 +74,15 @@ alias -g L='|less'
 alias -g C='|wc -l'
 
 alias gis='git status'
-alias cal='cal -m'
+alias cal='ncal -b'
 
-bindkey '5D' backward-word
-bindkey '5C' forward-word
-bindkey '3D' backward-word
-bindkey '3C' forward-word
 
-bindkey '\e\e[D' backward-word
-bindkey '\e\e[C' forward-word
+function markfile () {
+    mv "$1" "_$1"
+}
+
+bindkey "\e\e[D" backward-word
+bindkey "\e\e[C" forward-word
 bindkey '\e[7~'  beginning-of-line
 bindkey '\e[8~'  end-of-line
 bindkey '^[[1~'  beginning-of-line
@@ -90,20 +91,22 @@ bindkey '^[[A' up-line-or-search
 bindkey '^[[B' down-line-or-search
 bindkey '\e[3~' delete-char
 
-export PATH=$PATH:~/usr/bin
-export PATH=$PATH:./node_modules/.bin
-# export PATH=/home/vdimir/usr/anacona3/bin:$PATH
-export PYTHONPATH=/home/vdimir/usr/xgb/lib/python:/home/vdimir/usr/anacona3/lib:$PYTHONPATH
-# export PATH=/home/vdimir/usr/anaconda2/bin:$PATH
 export PATH=/home/vdimir/.local/bin:$PATH
 
-export LANG=en_US.UTF-8
+# export LANG=en_US.UTF-8
 
 stty -ixon
 # eval $(thefuck --alias)
 
 autoload -U +X compinit && compinit
 autoload -U +X bashcompinit && bashcompinit
-eval "$(stack --bash-completion-script stack)"
+# eval "$(stack --bash-completion-script stack)"
 
-export TERM=xterm-256color
+export TERM=rxvt-unicode-256color
+
+source "$HOME/minimal.zsh"
+
+
+
+PROMPT=' $(minimal_path)$(minimal_vcs) $ '
+RPROMPT='%T'

@@ -81,6 +81,26 @@ function markfile () {
     mv "$1" "_$1"
 }
 
+function venv () {
+  CURDIR=`pwd`
+  ACTIVATEPATH="/bin/activate"
+  VENVDIRS=("venv" ".env")
+  while [[ `pwd` != "/" ]]; do
+    for DIR in $VENVDIRS; do
+      FILE=$DIR$ACTIVATEPATH
+      if [ -f $FILE ]; then
+        echo "Activating venv."
+        source $FILE
+        cd $CURDIR
+        return
+      fi
+    done
+    cd ..
+  done
+  echo "Virtual env not found."
+  cd $CURDIR
+}
+
 bindkey "\e\e[D" backward-word
 bindkey "\e\e[C" forward-word
 bindkey '\e[7~'  beginning-of-line
@@ -104,9 +124,7 @@ autoload -U +X bashcompinit && bashcompinit
 
 export TERM=rxvt-unicode-256color
 
-source "$HOME/minimal.zsh"
+#source "$HOME/minimal.zsh"
 
-
-
-PROMPT=' $(minimal_path)$(minimal_vcs) $ '
+#PROMPT=' $(minimal_path)$(minimal_vcs) $ '
 RPROMPT='%T'

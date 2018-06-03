@@ -4,6 +4,7 @@ SAVEHIST=1000
 
 fpath=(~/.zsh/site-functions $fpath) 
 # fpath+=~/.zfunc
+source /usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 
 setopt HIST_IGNORE_ALL_DUPS
 setopt HIST_REDUCE_BLANKS
@@ -26,7 +27,6 @@ zstyle ':completion:*:functions' ignored-patterns '_*'
 zstyle ':completion:*' completer _expand _complete _ignored _correct _approximate
 zstyle ':completion:*' menu select
 zstyle ':completion:*' use-compctl false
-zstyle :compinstall filename '/home/vladimir/.zshrc'
 
 autoload -Uz compinit
 compinit
@@ -47,7 +47,8 @@ autoload -U colors && colors
 zstyle ':vcs_info:git*' formats "%{$reset_color%}(%b%{$reset_color%} %m%u%c%{$reset_color%})"
 zstyle ':vcs_info:*' check-for-changes true
 PROMPT=$' %{\e[1;34m%}%(5~|%-1~/.../%2~|%~) ${vcs_info_msg_0_}%{\e[1;34m%}%#%{\e[0m%} '
-RPROMPT='%T'
+# RPROMPT='%T'
+RPROMPT=''
 
 alias ls='ls --group-directories-first --color=auto'
 alias dir='dir --color=auto'
@@ -72,6 +73,7 @@ alias -g T='|tail'
 alias -g H='|head'
 alias -g L='|less'
 alias -g C='|wc -l'
+alias -g N='>/dev/null 2>&1'
 
 alias gis='git status'
 alias cal='ncal -b'
@@ -107,8 +109,10 @@ bindkey '\e[7~'  beginning-of-line
 bindkey '\e[8~'  end-of-line
 bindkey '^[[1~'  beginning-of-line
 bindkey '^[[4~'  end-of-line
-bindkey '^[[A' up-line-or-search
-bindkey '^[[B' down-line-or-search
+# bindkey '^[[A' up-line-or-search
+# bindkey '^[[B' down-line-or-search
+bindkey '^[[A' history-beginning-search-backward
+bindkey '^[[B' history-beginning-search-forward
 bindkey '\e[3~' delete-char
 
 export PATH=/home/vdimir/.local/bin:$PATH
@@ -122,9 +126,12 @@ autoload -U +X compinit && compinit
 autoload -U +X bashcompinit && bashcompinit
 # eval "$(stack --bash-completion-script stack)"
 
-export TERM=rxvt-unicode-256color
+export TERM=rxvt-256color
+# export TERM='xterm-256color'
 
-#source "$HOME/minimal.zsh"
+# source "$HOME/minimal.zsh"
 
 #PROMPT=' $(minimal_path)$(minimal_vcs) $ '
-RPROMPT='%T'
+
+source ~/.zsh/zprofile.sh
+

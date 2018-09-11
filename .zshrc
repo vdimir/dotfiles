@@ -4,7 +4,7 @@ SAVEHIST=1000
 
 fpath=(~/.zsh/site-functions $fpath) 
 # fpath+=~/.zfunc
-source /usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+source /usr/share/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh>/dev/null 2>&1 || source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh>/dev/null 2>&1
 
 setopt HIST_IGNORE_ALL_DUPS
 setopt HIST_REDUCE_BLANKS
@@ -133,5 +133,5 @@ export TERM=rxvt-256color
 
 #PROMPT=' $(minimal_path)$(minimal_vcs) $ '
 
-source ~/.zsh/zprofile.sh
+source ~/.zsh/zprofile.sh>/dev/null 2>&1
 

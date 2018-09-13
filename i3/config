@@ -175,6 +175,12 @@ bindsym $mod+Shift+bracketright move workspace to output right
 
 bindsym $mod+Tab workspace next
 
+mouse_warping none
+
+bindsym XF86AudioRaiseVolume exec --no-startup-id ponymix increase 5 --max-volume 120 && paplay /usr/share/sounds/freedesktop/stereo/message.oga
+bindsym XF86AudioLowerVolume exec --no-startup-id ponymix decrease 5 --max-volume 120 && paplay /usr/share/sounds/freedesktop/stereo/message.oga
+bindsym XF86AudioMute exec --no-startup-id pactl set-sink-mute 0 toggle && paplay /usr/share/sounds/freedesktop/stereo/message.oga
+
 # Autostart
 exec --no-startup-id "~/.autostart.sh"
 

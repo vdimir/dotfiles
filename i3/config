@@ -1,6 +1,6 @@
 
 assign [class="Firefox"] 1
-for_window [class="^.*"] border pixel 3
+# for_window [class="^.*"] border pixel 2
 
 set $mod Mod4
 
@@ -38,14 +38,13 @@ bindsym $mod+Shift+Right move right
 
 bindsym $mod+v split t
 bindsym $mod+f fullscreen toggle
-bindsym $mod+s layout stacking
-bindsym $mod+w layout tabbed
+bindsym $mod+w layout toggle tabbed stacked split
 bindsym $mod+e layout toggle split
 
 bindsym $mod+Shift+space floating toggle
 bindsym $mod+space focus mode_toggle
 bindsym $mod+a focus parent
-# bindsym $mod+d focus child
+bindsym $mod+s focus child
 
 set $ws1 "1"
 set $ws2 "2"
@@ -110,7 +109,7 @@ bar {
         position          top
         # mode              hide
         tray_output       none
-        font pango:DejaVu Sans Mono Awesome 8.7
+        font pango:DejaVu Sans Mono Awesome 8.5
 }
 
 bindsym $mod+b bar mode toggle
@@ -122,6 +121,10 @@ bindsym $mod+Shift+bracketright move workspace to output right
 bindsym $mod+Tab workspace next
 
 mouse_warping none
+
+bindsym --release button2 kill
+bindsym --release button3 fullscreen toggle
+bindsym --whole-window $mod+button2 floating toggle
 
 bindsym XF86AudioRaiseVolume exec --no-startup-id ponymix increase 5 --max-volume 120 && paplay /usr/share/sounds/freedesktop/stereo/message.oga
 bindsym XF86AudioLowerVolume exec --no-startup-id ponymix decrease 5 --max-volume 120 && paplay /usr/share/sounds/freedesktop/stereo/message.oga

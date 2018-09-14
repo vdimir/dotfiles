@@ -105,8 +105,12 @@ bindsym $mod+d mode "resize"
 # Start i3bar to display a workspace bar (plus the system information i3status
 # finds out, if available)
 bar {
-        status_command i3status
-        font pango:DejaVu Sans Mono Awesome 9
+        status_command ~/.config/i3/i3status-conky/i3status.sh
+        # status_command i3status
+        position          top
+        # mode              hide
+        tray_output       none
+        font pango:DejaVu Sans Mono Awesome 8.7
 }
 
 bindsym $mod+b bar mode toggle
@@ -124,7 +128,7 @@ bindsym XF86AudioLowerVolume exec --no-startup-id ponymix decrease 5 --max-volum
 bindsym XF86AudioMute exec --no-startup-id pactl set-sink-mute 0 toggle && paplay /usr/share/sounds/freedesktop/stereo/message.oga
 
 # https://github.com/justbuchanan/i3scripts/tree/52a39abd6371f7c9d03c9bbc1a08f33a833cb6a4
-exec_always ~/.usr/i3autoname_workspace/autoname_workspaces.py &
+exec_always --no-startup-id ~/.usr/i3autoname_workspace/autoname_workspaces.py &
 
 # Autostart
 exec --no-startup-id "~/.autostart.sh"

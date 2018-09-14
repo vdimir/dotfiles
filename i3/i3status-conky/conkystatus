@@ -1,0 +1,102 @@
+#### Conky configuration file
+## to replace the i3status for i3bar
+# This script was partly stolen from a website I can't remember.
+out_to_x no
+own_window no
+out_to_console yes
+background no
+max_text_width 0
+
+# Update interval in seconds
+update_interval 1.0
+
+# This is the number of times Conky will update before quitting.
+# Set to zero to run forever.
+total_run_times 0
+
+# Shortens units to a single character (kiB->k, GiB->G, etc.). Default is off.
+short_units yes
+
+# How strict should if_up be when testing an interface for being up?
+# The value is one of up, link or address, to check for the interface
+# being solely up, being up and having link or being up, having link
+# and an assigned IP address. 
+if_up_strictness address
+
+# Add spaces to keep things from moving about?  This only affects certain objects.
+# use_spacer should have an argument of left, right, or none
+use_spacer left
+
+# Force UTF8? note that UTF8 support required XFT
+override_utf8_locale no
+
+# number of cpu samples to average
+# set to 1 to disable averaging
+cpu_avg_samples 2
+
+# Stuff after 'TEXT' will be formatted on screen
+TEXT
+
+# JSON for i3bar
+[
+    { "full_text" : "  ${exec amixer get Master -M | grep -oE -m1 "[[:digit:]]*%"}", "color" : "\#ffffff"},
+
+    ${if_match ${battery_percent}>15}\
+        ${if_match ${battery_percent}>35}\
+            ${if_match ${battery_percent}>60}\
+                ${if_match ${battery_percent}>80}\
+                    { "full_text" : "", "color" : ${if_match "${battery_short}"<"F"}"\#ff8800"${else}"\#ffffff"${endif} }, \
+                ${else}\
+                    { "full_text" : "", "color" : ${if_match "${battery_short}"<"D"}"\#ffffff"${else}"\#ff8800"${endif} }, \
+                ${endif}\
+            ${else}\
+                { "full_text" : "", "color" : ${if_match "${battery_short}"<"D"}"\#ffffff"${else}"\#ff8800"${endif} }, \
+            ${endif}\
+        ${else}\
+            { "full_text" : "", "color" : ${if_match "${battery_short}"<"D"}"\#ffffff"${else}"\#ff8800"${endif} }, \
+        ${endif}\
+    ${else}\
+        { "full_text" : "", "color" : "\#ff0000" }, \
+    ${endif}\
+ 
+    { "full_text" : " ${fs_free /home}, ${fs_free /} " , "color" : "\#ffffff" },
+    
+    { "full_text" : " ${mem}" , "color" : \
+    ${if_match ${memperc}<90}"\#ffffff"${else}"\#ff0000"${endif} }, 
+
+    # { "full_text" : " ${mem}, ${cpu}%" , "color" : \
+    # ${if_match ${memperc}<90}\
+    #     ${if_match ${cpu}<90}"\#ffffff"${else}"\#ff0000"${endif}\
+    #     ${else}"\#ff0000"${endif} }, 
+
+    { "full_text" : ${if_match ${cpu} < 10}"    ${cpu}% "${else}"  ${cpu}% "${endif},\
+      "color" : ${if_match ${cpu}<90}"\#ffffff"${else}"\#ff0000"${endif},
+      "min_width": " 100%"
+    },\
+
+    ${if_up wlp3s0}
+        ${if_match ${wireless_link_qual_perc wlp3s0}>70}
+            ${if_match "${wireless_essid wlp3s0}"=="Foobar"}
+                { "full_text" : "  ${wireless_essid wlp3s0}", "color" : "\#ffffff" },
+            ${else}
+                { "full_text" : "  ", "color" : "\#ffffff" },
+            ${endif}
+        ${else}
+            ${if_match "${wireless_essid wlp3s0}"=="Foobar"}
+                { "full_text" : "  ${wireless_essid wlp3s0}", "color" : "\#ffffff" },
+            ${else}
+                { "full_text" : "  ", "color" : "\#ffffff" },
+            ${endif}
+        { "full_text" : "  ${wireless_essid wlp3s0}${wireless_link_qual_perc wlp3s0}%", "color" : "\#ffffff" }, 
+        ${endif}
+    ${else}\
+       ${if_up eth0} { "full_text" : "Eth: ${addr eth0}" , "color" : "\#00ff00" }, ${else}\
+          ${if_up enp0s20u1} { "full_text" : "USB: ${addr enp0s20u1}" , "color" :"\#00ff00" }, ${else}\
+               { "full_text" : "No Network" , "color" : "\#ff0000" },\
+           ${endif}\
+       ${endif}\
+    ${endif}\
+    
+    { "full_text" : " ${time %H:%M:%S}" , "color" : "\#ff8800"},
+    { "full_text" : " ${time %d %b, %a}" , "color" : "\#ffffff" }
+],

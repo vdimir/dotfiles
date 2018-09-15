@@ -1,6 +1,15 @@
+# i3 config file
 
-assign [class="Firefox"] 1
+assign [class="Firefox"] number 1
 # for_window [class="^.*"] border pixel 2
+hide_edge_borders both
+
+client.focused          #4c7899 #285577 #ffffff #2e9ef4   #285577
+client.focused_inactive #333333 #5f676a #ffffff #484e50   #5f676a
+client.unfocused        #333333 #222222 #888888 #292d2e   #222222
+client.urgent           #2f343a #ffa340 #ffffff #ffa340   #ffa340
+client.placeholder      #000000 #0c0c0c #ffffff #000000   #0c0c0c
+client.background       #ffffff
 
 set $mod Mod4
 
@@ -40,6 +49,9 @@ bindsym $mod+v split t
 bindsym $mod+f fullscreen toggle
 bindsym $mod+w layout toggle tabbed stacked split
 bindsym $mod+e layout toggle split
+
+floating_minimum_size 100 x 100
+floating_maximum_size 800 x 600
 
 bindsym $mod+Shift+space floating toggle
 bindsym $mod+space focus mode_toggle
@@ -84,15 +96,15 @@ bindsym $mod+Shift+r restart
 bindsym $mod+Shift+e exec "i3-nagbar -t warning -m 'You pressed the exit shortcut. Do you really want to exit i3? This will end your X session.' -b 'Yes, exit i3' 'i3-msg exit'"
 
 mode "resize" {
-        bindsym h resize shrink width 10 px or 10 ppt
-        bindsym j resize grow height 10 px or 10 ppt
-        bindsym k resize shrink height 10 px or 10 ppt
-        bindsym l resize grow width 10 px or 10 ppt
+        bindsym h resize shrink width 5 px or 5 ppt
+        bindsym j resize grow height 5 px or 5 ppt
+        bindsym k resize shrink height 5 px or 5 ppt
+        bindsym l resize grow width 5 px or 5 ppt
 
-        bindsym Left resize shrink width 10 px or 10 ppt
-        bindsym Down resize grow height 10 px or 10 ppt
-        bindsym Up resize shrink height 10 px or 10 ppt
-        bindsym Right resize grow width 10 px or 10 ppt
+        bindsym Left resize shrink width 5 px or 5 ppt
+        bindsym Down resize grow height 5 px or 5 ppt
+        bindsym Up resize shrink height 5 px or 5 ppt
+        bindsym Right resize grow width 5 px or 5 ppt
 
         bindsym Return mode "default"
         bindsym Escape mode "default"
@@ -101,9 +113,55 @@ mode "resize" {
 
 bindsym $mod+d mode "resize"
 
+mode "move" {
+        bindsym h focus left
+        bindsym j focus down
+        bindsym k focus up
+        bindsym l focus right
+
+        bindsym Left focus left
+        bindsym Down focus down
+        bindsym Up focus up
+        bindsym Right focus right
+
+        bindsym Shift+h move left
+        bindsym Shift+j move down
+        bindsym Shift+k move up
+        bindsym Shift+l move right
+
+        bindsym Shift+Left move left
+        bindsym Shift+Down move down
+        bindsym Shift+Up move up
+        bindsym Shift+Right move right
+
+        bindsym v split t
+        bindsym f fullscreen toggle
+        bindsym w layout toggle tabbed stacked split
+        bindsym e layout toggle split
+
+        bindsym Return mode "default"
+        bindsym Escape mode "default"
+        bindsym $mod+z mode "default"
+        bindsym z mode "default"
+}
+
+bindsym $mod+z mode "move"
+
 # Start i3bar to display a workspace bar (plus the system information i3status
 # finds out, if available)
 bar {
+        colors {
+                background #333333
+                statusline #ffffff
+                separator #666666
+
+                focused_workspace  #4c7899 #285577 #ffffff
+                active_workspace   #333333 #5f676a #ffffff
+                inactive_workspace #333333 #222222 #888888
+                urgent_workspace   #2f343a #ffa340 #ffffff
+                binding_mode       #B15500 #743800 #ffffff
+            }
+        separator_symbol "::"
         status_command ~/.config/i3/i3status-conky/i3status.sh
         # status_command i3status
         position          top
@@ -117,18 +175,30 @@ bindsym $mod+x [urgent=latest] focus
 
 bindsym $mod+Shift+bracketleft move workspace to output left
 bindsym $mod+Shift+bracketright move workspace to output right
+bindsym $mod+bracketleft move window to output left; focus output left
+bindsym $mod+bracketright move window to output right; focus output right
 
 bindsym $mod+Tab workspace next
 
 mouse_warping none
 
+bindsym  --whole-window button8 move right
+bindsym  --whole-window button9 move left
+
 bindsym --release button2 kill
 bindsym --release button3 fullscreen toggle
 bindsym --whole-window $mod+button2 floating toggle
 
+bindsym Print exec --no-startup-id flameshot gui
+bindsym Shift+Print exec --no-startup-id flameshot full -c && paplay /usr/share/sounds/freedesktop/stereo/bell.oga
+
+bindsym XF86AudioMute exec --no-startup-id  ~/dotfiles/scripts/switch_hdmi_audio.sh
+
 bindsym XF86AudioRaiseVolume exec --no-startup-id ponymix increase 5 --max-volume 120 && paplay /usr/share/sounds/freedesktop/stereo/message.oga
+
 bindsym XF86AudioLowerVolume exec --no-startup-id ponymix decrease 5 --max-volume 120 && paplay /usr/share/sounds/freedesktop/stereo/message.oga
-bindsym XF86AudioMute exec --no-startup-id pactl set-sink-mute 0 toggle && paplay /usr/share/sounds/freedesktop/stereo/message.oga
+
+# bindsym XF86AudioMute exec --no-startup-id pactl set-sink-mute 0 toggle && paplay /usr/share/sounds/freedesktop/stereo/message.oga
 
 # https://github.com/justbuchanan/i3scripts/tree/52a39abd6371f7c9d03c9bbc1a08f33a833cb6a4
 exec_always --no-startup-id ~/.usr/i3autoname_workspace/autoname_workspaces.py &

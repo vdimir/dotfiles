@@ -3,3 +3,5 @@ numlockx &
 telegram-desktop -startintray &
 sbxkb &
 ~/.fehbg
+xinput --set-prop "A4TECH USB Device" "Coordinate Transformation Matrix" 1 0 0 0 1 0 0 0 2
+

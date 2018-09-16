@@ -77,17 +77,16 @@ TEXT
     ${if_up wlp3s0}
         ${if_match ${wireless_link_qual_perc wlp3s0}>70}
             ${if_match "${wireless_essid wlp3s0}"=="Foobar"}
-                { "full_text" : "  ${wireless_essid wlp3s0}", "color" : "\#ffffff" },
+                { "full_text" : "", "color" : "\#ffffff" },
             ${else}
-                { "full_text" : "  ", "color" : "\#ffffff" },
+                { "full_text" : " ${wireless_essid wlp3s0}", "color" : "\#ffffff" },
             ${endif}
         ${else}
             ${if_match "${wireless_essid wlp3s0}"=="Foobar"}
-                { "full_text" : "  ${wireless_essid wlp3s0}", "color" : "\#ffffff" },
+                { "full_text" : " ${wireless_link_qual_perc wlp3s0}%", "color" : "\#ffffff" },
             ${else}
-                { "full_text" : "  ", "color" : "\#ffffff" },
+                { "full_text" : " ${wireless_essid wlp3s0}${wireless_link_qual_perc wlp3s0}%", "color" : "\#ffffff" },
             ${endif}
-        { "full_text" : "  ${wireless_essid wlp3s0}${wireless_link_qual_perc wlp3s0}%", "color" : "\#ffffff" }, 
         ${endif}
     ${else}\
        ${if_up eth0} { "full_text" : "Eth: ${addr eth0}" , "color" : "\#00ff00" }, ${else}\
@@ -97,11 +96,11 @@ TEXT
        ${endif}\
     ${endif}\
 
-    { "full_text" : " ${time %H:%M:%S}" , "color" : "\#ff8800"},
+    ${if_match ${exec xset -q | grep -A 0 'LED' | cut -c63}==0}
+        { "full_text" : " en", "color" : "\#ffd0d0" },
+    ${else}
+        { "full_text" : " ru", "color" : "\#d0d0ff" },
+    ${endif}
     { "full_text" : " ${time %d %b, %a}" , "color" : "\#ffffff" },
-      ${if_match ${exec xset -q | grep -A 0 'LED' | cut -c63}==0}
-        { "full_text" : " en", "color" : "\#ff3d3d" }
-      ${else}
-        { "full_text" : " ru", "color" : "\#8888ff" }
-      ${endif}
+    { "full_text" : " ${time %H:%M:%S}" , "color" : "\#ffffff"}
 ],

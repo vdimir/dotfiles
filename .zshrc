@@ -85,8 +85,11 @@ function markfile () {
 
 function venv () {
   CURDIR=`pwd`
+  if [ ! -z "$1" ]; then
+      cd "$1"
+  fi
   ACTIVATEPATH="/bin/activate"
-  VENVDIRS=("venv" ".env")
+  VENVDIRS=("$@" "venv" ".env" "venv2")
   while [[ `pwd` != "/" ]]; do
     for DIR in $VENVDIRS; do
       FILE=$DIR$ACTIVATEPATH

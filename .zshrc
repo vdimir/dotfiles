@@ -76,7 +76,7 @@ alias -g C='|wc -l'
 alias -g N='>/dev/null 2>&1'
 
 alias gis='git status'
-alias cal='ncal -b'
+alias cal='cal -m'
 
 
 function markfile () {
@@ -92,7 +92,7 @@ function venv () {
   VENVDIRS=("$@" "venv" ".env" "venv2")
   while [[ `pwd` != "/" ]]; do
     for DIR in $VENVDIRS; do
-      FILE=$DIR$ACTIVATEPATH
+      FILE=$DIR/$ACTIVATEPATH
       if [ -f $FILE ]; then
         echo "Activating venv."
         source $FILE
@@ -137,4 +137,5 @@ export TERM=rxvt-256color
 #PROMPT=' $(minimal_path)$(minimal_vcs) $ '
 
 source ~/.zsh/zprofile.sh>/dev/null 2>&1
+
 

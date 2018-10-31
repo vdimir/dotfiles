@@ -3,3 +3,5 @@
 	name = Vdimir
 [alias]
 	co = checkout
+[core]
+	editor = vim

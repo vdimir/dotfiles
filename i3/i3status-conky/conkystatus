@@ -59,23 +59,23 @@ TEXT
         { "full_text" : "", "color" : "\#ff0000" }, \
     ${endif}\
  
-    { "full_text" : " ${fs_free /home}, ${fs_free /} " , "color" : "\#ffffff" },
+    # { "full_text" : " ${fs_free /home}, ${fs_free /} " , "color" : "\#ffffff" },
     
-    { "full_text" : " ${mem}" , "color" : \
-    ${if_match ${memperc}<90}"\#ffffff"${else}"\#ff0000"${endif} }, 
+    # { "full_text" : " ${mem}" , "color" : \
+    # ${if_match ${memperc}<90}"\#ffffff"${else}"\#ff0000"${endif} },
 
     # { "full_text" : " ${mem}, ${cpu}%" , "color" : \
     # ${if_match ${memperc}<90}\
     #     ${if_match ${cpu}<90}"\#ffffff"${else}"\#ff0000"${endif}\
     #     ${else}"\#ff0000"${endif} }, 
 
-    { "full_text" : ${if_match ${cpu} < 10}"    ${cpu}% "${else}"  ${cpu}% "${endif},\
-      "color" : ${if_match ${cpu}<90}"\#ffffff"${else}"\#ff0000"${endif},
-      "min_width": " 100%"
-    },\
+    # { "full_text" : ${if_match ${cpu} < 10}"    ${cpu}% "${else}"  ${cpu}% "${endif},\
+      # "color" : ${if_match ${cpu}<90}"\#ffffff"${else}"\#ff0000"${endif},
+      # "min_width": " 100%"
+    # },\
 
     ${if_up wlp3s0}
-        ${if_match ${wireless_link_qual_perc wlp3s0}>70}
+        ${if_match ${wireless_link_qual_perc wlp3s0}>60}
             ${if_match "${wireless_essid wlp3s0}"=="Foobar"}
                 { "full_text" : "", "color" : "\#ffffff" },
             ${else}

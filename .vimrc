@@ -6,24 +6,17 @@ filetype off
 set rtp+=~/.vim/bundle/Vundle.vim
 call vundle#begin()
 Plugin 'VundleVim/Vundle.vim'
-
 Plugin 'jeffkreeftmeijer/vim-numbertoggle'
 Plugin 'scrooloose/nerdtree'
 Plugin 'airblade/vim-gitgutter'
 Plugin 'vim-airline/vim-airline'
 Plugin 'vim-airline/vim-airline-themes'
-
 Plugin 'ctrlpvim/ctrlp.vim'
 Plugin 'tpope/vim-surround'
 Plugin 'tpope/vim-repeat'
 Plugin 'jpalardy/vim-slime'
-
 Plugin 'Shougo/neocomplete.vim'
-Plugin 'eagletmt/neco-ghc'
-"Plugin 'Twinside/vim-haskellConceal'
-
 Plugin 'scrooloose/nerdcommenter'
-
 Plugin 'terryma/vim-multiple-cursors'
 "Plugin 'paradigm/vim-multicursor'
 call vundle#end()
@@ -100,7 +93,7 @@ set showcmd
 "set ruler
 set colorcolumn=99
 
-set list listchars=tab:→\ ,trail:·
+" set list listchars=tab:→\ ,trail:·
 
 set hidden
 
@@ -133,3 +126,4 @@ colorscheme distinguished
 "colorscheme molokai
 "
 "autocmd VimEnter,VimLeave * silent !tmux set status
+"

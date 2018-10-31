@@ -17,6 +17,12 @@ font pango:DejaVu Sans Mono 8
 # per application settings
 assign [class="Firefox"] number 1
 for_window [class="flameshot"] floating enable
+for_window [class="keepassxc"] floating enable
+for_window [title="My window"] floating enable
+for_window [title="Media viewer"] fullscreen enable
+
+for_window [class="^jetbrains-.+"][window_type=dialog] focus
+for_window [instance="sun-awt-X11-XWindowPeer"] border pixel 0
 
 floating_modifier $mod
 
@@ -25,8 +31,11 @@ bindsym $mod+c exec ~/.config/i3/run_or_raise.sh Firefox "firefox"
 
 bindsym $mod+q kill
 
-bindsym $mod+r exec --no-startup-id ~/dotfiles/scripts/dmenu_recent.sh
+bindsym $mod+r exec --no-startup-id ~/dotfiles/scripts/dmenu_recent.sh -fn 'DejaVu Sans Mono-10' -l 10 -x 450 -y 300 -w 500
+bindsym $mod+t exec --no-startup-id ~/dotfiles/scripts/dmenu_run_scripts.sh ~/.screenlayout && ~/.fehbg
 
+
+bindsym Mod1+Tab exec --no-startup-id ~/.config/i3/focus_next.py
 bindsym $mod+h focus left
 bindsym $mod+j focus down
 bindsym $mod+k focus up
@@ -49,11 +58,11 @@ bindsym $mod+Shift+Right move right
 
 bindsym $mod+v split t
 bindsym $mod+f fullscreen toggle
-bindsym $mod+w layout toggle tabbed stacked split
+bindsym $mod+w layout toggle tabbed stacked
 bindsym $mod+e layout toggle split
 
 floating_minimum_size 100 x 100
-floating_maximum_size 800 x 600
+floating_maximum_size 1200 x 1000
 
 bindsym $mod+Shift+space floating toggle
 bindsym $mod+space focus mode_toggle
@@ -115,6 +124,11 @@ mode "resize" {
 
 bindsym $mod+d mode "resize"
 
+bindsym $mod+g resize grow width 5 px
+bindsym $mod+Shift+g resize shrink width 5 px
+bindsym $mod+b resize grow height 5 px
+bindsym $mod+Shift+b resize shrink height 5 px
+
 mode "move" {
         bindsym h focus left
         bindsym j focus down
@@ -155,6 +169,7 @@ mode "$mode_power" {
     bindsym e exec --no-startup-id i3-msg exit, mode "default"
     bindsym r exec --no-startup-id systemctl reboot, mode "default"
     bindsym s exec --no-startup-id systemctl poweroff -i, mode "default"
+    bindsym XF86PowerOff exec --no-startup-id systemctl poweroff -i, mode "default"
 
     bindsym Return mode "default"
     bindsym Escape mode "default"
@@ -182,10 +197,10 @@ bar {
         position          top
         # mode              hide
         tray_output       primary
-        font pango:DejaVu Sans Mono Awesome 8.5
+        font pango:DejaVu Sans Mono Awesome 9
 }
 
-bindsym $mod+b bar mode toggle
+# bindsym $mod+b bar mode toggle
 bindsym $mod+x [urgent=latest] focus
 
 bindsym $mod+Shift+bracketleft move workspace to output left
@@ -200,12 +215,12 @@ mouse_warping none
 bindsym  --whole-window button8 move right
 bindsym  --whole-window button9 move left
 
-bindsym --release button2 kill
-bindsym --release button3 fullscreen toggle
+bindsym --release button3 kill
+# bindsym --release button3 fullscreen toggle
 bindsym --whole-window $mod+button2 floating toggle
 
-bindsym Print exec --no-startup-id flameshot gui
-bindsym Shift+Print exec --no-startup-id flameshot full -c && paplay /usr/share/sounds/freedesktop/stereo/bell.oga
+bindsym ShiftPrint exec --no-startup-id flameshot gui
+bindsym Print exec --no-startup-id flameshot full -c && paplay /usr/share/sounds/freedesktop/stereo/bell.oga
 
 bindsym --release XF86PowerOff mode "$mode_power"
 
@@ -216,6 +231,9 @@ bindsym XF86AudioRaiseVolume exec --no-startup-id ponymix increase 5 --max-volum
 bindsym XF86AudioLowerVolume exec --no-startup-id ponymix decrease 5 --max-volume 120 && paplay /usr/share/sounds/freedesktop/stereo/message.oga
 
 # bindsym XF86AudioMute exec --no-startup-id pactl set-sink-mute 0 toggle && paplay /usr/share/sounds/freedesktop/stereo/message.oga
+                                                                                                                            
+bindsym $mod+F9 exec xbacklight -dec 10 -ctrl intel_backlight && paplay /usr/share/sounds/freedesktop/stereo/message.oga
+bindsym $mod+F10 exec xbacklight -inc 10 -ctrl intel_backlight && paplay /usr/share/sounds/freedesktop/stereo/message.oga
 
 # https://github.com/justbuchanan/i3scripts/tree/52a39abd6371f7c9d03c9bbc1a08f33a833cb6a4
 exec_always --no-startup-id ~/.usr/i3autoname_workspace/autoname_workspaces.py &

@@ -101,6 +101,6 @@ TEXT
     ${else}
         { "full_text" : " ru", "color" : "\#d0d0ff" },
     ${endif}
-    { "full_text" : " ${time %d %b, %a}" , "color" : "\#ffffff" },
-    { "full_text" : " ${time %H:%M:%S}" , "color" : "\#ffffff"}
+    { "full_text" : "${time %d %b, %a}" , "color" : "\#ffffff" },
+    { "full_text" : "${time %H:%M:%S}" , "color" : "\#ffffff"}
 ],

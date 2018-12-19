@@ -31,6 +31,7 @@
 		}
 	},
 
+    { "keys": ["ctrl+m"], "command": "toggle_minimap" },
 	{
 		"keys": ["ctrl+/"],
 		"command": "chain",
@@ -93,6 +94,19 @@
 	{
 		"keys": [ "ctrl+alt+l" ],
 		"command": "beautify_rust"
-	}
+    },
+    { "keys": ["alt+w"], "command": "expand_selection", "args": {"to": "scope"} },
+    { "keys": ["ctrl+k", "k"],
+      "command": "sublime_linter_toggle_highlights"
+    },
+    { "keys": ["shift+alt+left"], "command": "jump_back" },
+    { "keys": ["shift+alt+right"], "command": "jump_forward" },
+    {
+        "keys": ["ctrl+shift+w"],
+        "command": "toggle_setting",
+        "args": {
+            "setting": "word_wrap"
+        }
+    },
 	// { "keys": ["ctrl+shift+b"], "command": "toggle_menu" },
 ]

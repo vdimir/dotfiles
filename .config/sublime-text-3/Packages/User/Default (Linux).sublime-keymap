@@ -81,7 +81,7 @@
 
 	// { "keys": ["ctrl+7"], "command": "toggle_comment", "args": { "block": false } },
 	// { "keys": ["ctrl+shift+7"], "command": "toggle_comment", "args": { "block": true } }
-	{ "keys": ["ctrl+alt+b"], 
+	{ "keys": ["ctrl+alt+b"],
 
 		"command": "chain",
 		"args": {
@@ -108,5 +108,11 @@
             "setting": "word_wrap"
         }
     },
+    {
+        "keys": ["f3"], "command": "find_under",
+        "context": [
+	        { "key": "selection_empty", "operator": "equal", "operand": false}
+	    ]
+	 },
 	// { "keys": ["ctrl+shift+b"], "command": "toggle_menu" },
 ]

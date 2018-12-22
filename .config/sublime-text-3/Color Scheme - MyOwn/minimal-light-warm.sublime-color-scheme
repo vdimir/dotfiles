@@ -1,0 +1,140 @@
+{
+    "name": "Minimal Light Warm",
+    "author": "",
+    "variables":
+    {
+        "bg3": "hsl(59, 30%, 90%)",
+        "bg2": "hsl(59, 30%, 60%)",
+        "bg1": "hsl(59, 30%, 85%)",
+        "bg0": "hsl(59, 35%, 97%)",
+        "fg2": "hsl(0, 0%, 60%)",
+        "fg1": "hsl(0, 0%, 35%)",
+        "fg0": "hsl(0, 0%, 15%)",
+        "redpure": "#ff0000",
+        "red": "#d16c6c",
+        "green": "#60a369",
+    },
+    "globals":
+    {
+        "foreground": "var(fg0)",
+        "background": "var(bg0)",
+        "caret": "var(fg0)",
+        "line_highlight": "var(bg3)",
+        "selection": "var(bg1)",
+        "selection_border": "var(fg0)",
+        "inactive_selection": "var(bg1)",
+        "misspelling": "var(red)",
+        "shadow": "var(bg1)",
+        "active_guide": "var(red)",
+        "stack_guide": "var(red)",
+        "highlight": "var(fg2)",
+        "find_highlight_foreground": "var(fg0)",
+        "find_highlight": "var(bg2)",
+        "brackets_options": "underline",
+        "brackets_foreground": "var(fg2)",
+        "bracket_contents_options": "underline",
+        "bracket_contents_foreground": "var(fg2)",
+        "tags_options": "stippled_underline",
+        "tags_foreground": "var(fg2)",
+        "gutter": "var(bg0)"
+    },
+    "rules":
+    [
+        {
+            "name": "Invalid",
+            "scope": "invalid",
+            "foreground": "var(fg0)",
+            "background": "var(bg2)"
+        },
+        {
+            "name": "Comment",
+            "scope": "comment, punctuation.definition.comment",
+            "foreground": "var(fg1)",
+        },
+        {
+            "name": "String",
+            "scope": "string",
+            "foreground": "var(fg1)",
+        },
+        {
+            "name": "Punctuation",
+            "scope": "punctuation.definition",
+            "foreground": "var(fg1)"
+        },
+        {
+            "name": "Number",
+            "scope": "constant.numeric",
+            "foreground": "var(fg1)"
+        },
+        {
+            "name": "Built-in constant",
+            "scope": "constant.language",
+            "foreground": "var(fg0)",
+        },
+        {
+            "name": "User-defined constant",
+            "scope": "constant.character, constant.other",
+            "foreground": "var(fg0)"
+        },
+        {
+            "name": "Member Variable",
+            "scope": "variable.member",
+            "foreground": "var(fg0)"
+        },
+        {
+            "name": "Keyword",
+            "scope": "keyword - keyword.operator, keyword.operator.word",
+            "foreground": "var(fg0)"
+        },
+        {
+            "name": "Operators",
+            "scope": "keyword.operator",
+            "foreground": "var(fg0)"
+        },
+        {
+            "name": "Punctuation",
+            "scope": "punctuation.separator, punctuation.terminator",
+            "foreground": "var(fg1)"
+        },
+        {
+            "name": "Storage",
+            "scope": "storage",
+            "foreground": "var(fg1)"
+        },
+        {
+            "name": "Entity name",
+            "scope": "entity.name.function",
+            "foreground": "var(fg0)"
+        },
+        {
+            "name": "Function argument",
+            "scope": "variable.parameter",
+            "foreground": "var(fg0)"
+        },
+        {
+            "name": "Function call",
+            "scope": "variable.function, variable.annotation",
+            "foreground": "var(fg0)"
+        },
+        {
+            "name": "diff.header",
+            "scope": "meta.diff, meta.diff.header",
+            "foreground": "var(red)"
+        },
+        {
+            "name": "diff.deleted",
+            "scope": "markup.deleted",
+            "foreground": "var(fg2)"
+        },
+        {
+            "name": "diff.inserted",
+            "scope": "markup.inserted",
+            "foreground": "var(fg2)"
+        },
+        {
+            "name": "diff.changed",
+            "scope": "markup.changed",
+            "foreground": "var(fg2)"
+        },
+    ]
+}

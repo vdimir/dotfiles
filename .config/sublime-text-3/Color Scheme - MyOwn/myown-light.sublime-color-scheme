@@ -3,15 +3,14 @@
     "author": "",
     "variables":
     {
+        "bg0": "hsl(180, 7%, 97%)",
+        "bg1": "hsl(204, 10%, 90%)",
         "fg1": "#303030",
         "fg2": "#404060",
         "fg3": "hsl(0, 0%, 20%)",
         "fg4": "#406060",
         "fg5": "hsl(220, 10%, 40%)",
-        "white": "hsl(0, 0%, 100%)",
-        "bg1": "hsl(204, 10%, 90%)",
-        "bg0": "hsl(180, 7%, 97%)",
-        "red": "#ff0000"
+        "red": "#ff0000",
     },
     "globals":
     {
@@ -107,7 +106,6 @@
             "name": "Storage type",
             "scope": "storage.type",
             "foreground": "var(fg5)",
-            // "font_style": "bold"
         },
         {
             "name": "Entity name",

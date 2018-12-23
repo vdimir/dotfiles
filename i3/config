@@ -124,10 +124,10 @@ mode "resize" {
 
 bindsym $mod+d mode "resize"
 
-bindsym $mod+g resize grow width 5 px
-bindsym $mod+Shift+g resize shrink width 5 px
-bindsym $mod+b resize grow height 5 px
-bindsym $mod+Shift+b resize shrink height 5 px
+bindsym $mod+g resize grow width 50 px
+bindsym $mod+Shift+g resize shrink width 50 px
+bindsym $mod+b resize grow height 50 px
+bindsym $mod+Shift+b resize shrink height 50 px
 
 mode "move" {
         bindsym h focus left

@@ -20,6 +20,7 @@ for_window [class="flameshot"] floating enable
 for_window [class="keepassxc"] floating enable
 for_window [title="My window"] floating enable
 for_window [title="Media viewer"] fullscreen enable
+for_window [class="Display"] floating enable
 
 for_window [class="^jetbrains-.+"][window_type=dialog] focus
 for_window [instance="sun-awt-X11-XWindowPeer"] border pixel 0
@@ -60,6 +61,8 @@ bindsym $mod+v split t
 bindsym $mod+f fullscreen toggle
 bindsym $mod+w layout toggle tabbed stacked
 bindsym $mod+e layout toggle split
+
+bindsym $mod+apostrophe exec --no-startup-id "~/.custom_action.sh";
 
 floating_minimum_size 100 x 100
 floating_maximum_size 1200 x 1000
@@ -208,7 +211,10 @@ bindsym $mod+Shift+bracketright move workspace to output right
 bindsym $mod+bracketleft move window to output left; focus output left
 bindsym $mod+bracketright move window to output right; focus output right
 
-bindsym $mod+Tab workspace next
+bindsym $mod+Control+Left focus output left
+bindsym $mod+Control+Right focus output right
+
+bindsym $mod+Tab focus output right
 
 mouse_warping none
 

@@ -145,7 +145,8 @@ bindkey "^[[1;3D" backward-word
 bindkey "^[[3^" delete-word
 bindkey "^[[3"  delete-word
 
-export PATH=/home/vdimir/.local/bin:$PATH
+export PATH=$HOME/.local/bin:$HOME/.usr/bin:$PATH
+
 bindkey "[3;5~"  delete-word
 bindkey "[3;3~"  delete-word
 

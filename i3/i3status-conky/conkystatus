@@ -39,7 +39,7 @@ TEXT
 
 # JSON for i3bar
 [
-    { "full_text" : "  ${exec amixer get Master -M | grep -oE -m1 "[[:digit:]]*%"}", "color" : "\#ffffff"},
+    { "full_text" : "♪ ${exec amixer get Master -M | grep -oE -m1 "[[:digit:]]*%"}", "color" : "\#ffffff"},
 
     ${if_match ${battery_percent}>15}\
         ${if_match ${battery_percent}>35}\

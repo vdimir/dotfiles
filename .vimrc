@@ -6,7 +6,6 @@ filetype off
 set rtp+=~/.vim/bundle/Vundle.vim
 call vundle#begin()
 Plugin 'VundleVim/Vundle.vim'
-Plugin 'jeffkreeftmeijer/vim-numbertoggle'
 Plugin 'scrooloose/nerdtree'
 Plugin 'airblade/vim-gitgutter'
 Plugin 'vim-airline/vim-airline'
@@ -17,8 +16,6 @@ Plugin 'tpope/vim-repeat'
 Plugin 'jpalardy/vim-slime'
 Plugin 'Shougo/neocomplete.vim'
 Plugin 'scrooloose/nerdcommenter'
-Plugin 'terryma/vim-multiple-cursors'
-"Plugin 'paradigm/vim-multicursor'
 call vundle#end()
 
 map L $
@@ -39,24 +36,28 @@ let g:NERDSpaceDelims = 1
 let g:NERDAltDelims_haskell = 1
 
 nnoremap <c-_> :call NERDComment('n',"toggle")<CR>j
-vnoremap <c-_> :call NERDComment('x',"toggle")<CR>
+" vnoremap <c-_> :call NERDComment('x',"toggle")<CR>
+
+let g:ctrlp_user_command = ['.git', 'cd %s && git ls-files -co --exclude-standard']
 
 set wildignore+=*/node_modules/*
 
 let g:slime_target = "tmux"
 nmap <c-c><c-l> :SlimeSend0 "<c-l>"<CR>
-nmap <c-c><c-x> :SlimeSend0 ":r"<CR>
+nmap <c-c><c-x> :SlimeSend0 "r\n"<CR>
 imap <C-c> <ESC>:SlimeSend<CR>
 let g:slime_dont_ask_default = 1
 
 let g:slime_default_config = {"socket_name": "default", "target_pane": "slime:0.0"}
 
-let g:airline_powerline_fonts = 1
+let g:airline_powerline_fonts = 0
 let g:airline_right_sep = ''
 let g:airline_left_sep = ''
 let g:airline#extensions#tabline#enabled = 1
 let g:airline#extensions#tabline#show_buffers = 1
 let g:airline#extensions#tabline#show_tabs = 1
+let g:airline#extensions#keymap#enabled = '0'
+let g:airline_theme='silver'
 
 filetype plugin indent on
 set keymap=russian-jcukenwin
@@ -93,6 +94,7 @@ set showcmd
 "set ruler
 set colorcolumn=99
 
+
 " set list listchars=tab:→\ ,trail:·
 
 set hidden
@@ -107,12 +109,14 @@ set wildmenu
 set noswapfile
 nnoremap <silent> <cr> :nohlsearch<cr><cr>
 
-map <C-d> :NERDTreeToggle<CR>
+map <C-n> :NERDTreeToggle<CR>
 
 let g:NumberToggleTrigger="<F2>"
 set number
 
-nmap <S-CR> :a<CR><CR>.<CR>
+nmap <S-CR> :a<CR><CR>.<CR>i
+
+map <C-d> *#
 
 let mapleader=" "
 noremap <Leader>s :update<CR>
@@ -122,8 +126,8 @@ set showcmd
 
 set t_ut=
 
-colorscheme distinguished
-"colorscheme molokai
+"colorscheme monotonic
+colorscheme plain
 "
 "autocmd VimEnter,VimLeave * silent !tmux set status
 "

@@ -25,7 +25,7 @@ zstyle ':completion:*:processes-names' command 'ps xho command'
 eval `dircolors`
 zstyle ':completion:*:default' list-colors ${(s.:.)LS_COLORS}
 zstyle ':completion:*:functions' ignored-patterns '_*'
-zstyle ':completion:*' completer _expand _complete _ignored _approximate
+zstyle ':completion:*' completer _expand _complete _ignored
 zstyle ':completion:*' menu select
 zstyle ':completion:*' use-compctl false
 
@@ -80,12 +80,11 @@ alias -g N='>/dev/null 2>&1'
 
 alias cdp='popd'
 alias gis='git status'
-alias cal='cal -m'
-alias tmu='/home/cherkasov/.usr/run_tmux_rnd_color.sh'
 
 function b () {
-    echo "$1" | bc
+    echo "scale=3; $@" | bc 
 }
+alias b='noglob b'
 
 function venv () {
   CURDIR=`pwd`

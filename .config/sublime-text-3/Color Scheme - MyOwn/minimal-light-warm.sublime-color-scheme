@@ -136,5 +136,10 @@
             "scope": "markup.changed",
             "foreground": "var(fg2)"
         },
+        {
+            "name": "linter warn",
+            "scope": "region.yellowish markup.warning.sublime_linter",
+            "foreground": "var(fg1)"
+        }
     ]
 }

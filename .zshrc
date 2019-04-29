@@ -50,6 +50,12 @@ zstyle ':vcs_info:*' check-for-changes true
 PROMPT=$' %{\e[1;34m%}%(5~|%-1~/.../%2~|%~) %{\e[1;34m%}%#%{\e[0m%} '
 # RPROMPT='%T'
 RPROMPT='${vcs_info_msg_0_} %T'
+if [[ $+MC_SID = 1 ]] ; then
+        # inside Midnight Commander? Just give us a basic prompt
+        PROMPT=">%(#/#/) "
+        RPROMPT=""
+fi
+
 
 
 alias ls='ls --group-directories-first --color=auto -v'
@@ -77,6 +83,7 @@ alias -g H='|head'
 alias -g L='|less'
 alias -g C='|wc -l'
 alias -g N='>/dev/null 2>&1'
+alias -g XC='|xclip -i -sel clipboard'
 
 alias cdp='popd'
 alias gis='git status'
@@ -133,10 +140,10 @@ bindkey '\e[7~'  beginning-of-line
 bindkey '\e[8~'  end-of-line
 bindkey '^[[1~'  beginning-of-line
 bindkey '^[[4~'  end-of-line
-# bindkey '^[[A' history-beginning-search-backward
-# bindkey '^[[B' history-beginning-search-forward
-bindkey '^[[A' up-line-or-search
-bindkey '^[[B' down-line-or-search
+bindkey '^[[A' history-beginning-search-backward
+bindkey '^[[B' history-beginning-search-forward
+# bindkey '^[[A' up-line-or-search
+# bindkey '^[[B' down-line-or-search
 bindkey '\e[3~' delete-char
 bindkey "^[[1;3C" forward-word
 bindkey "^[[1;3D" backward-word

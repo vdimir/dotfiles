@@ -117,24 +117,24 @@
             "foreground": "var(fg0)"
         },
         {
-            "name": "diff.header",
-            "scope": "meta.diff, meta.diff.header",
-            "foreground": "var(red)"
-        },
-        {
             "name": "diff.deleted",
             "scope": "markup.deleted",
-            "foreground": "var(fg2)"
+            "foreground": "#D16C6C"
         },
         {
             "name": "diff.inserted",
             "scope": "markup.inserted",
-            "foreground": "var(fg2)"
+            "foreground": "#60A369"
         },
         {
             "name": "diff.changed",
             "scope": "markup.changed",
-            "foreground": "var(fg2)"
+            "foreground": "#E5AD47"
+        },
+        {
+            "name": "diff.header",
+            "scope": "meta.diff, meta.diff.header",
+            "foreground": "var(red)"
         },
         {
             "name": "linter warn",

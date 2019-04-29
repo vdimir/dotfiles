@@ -16,10 +16,17 @@ Plugin 'tpope/vim-repeat'
 Plugin 'jpalardy/vim-slime'
 Plugin 'Shougo/neocomplete.vim'
 Plugin 'scrooloose/nerdcommenter'
+Plugin 'ryanoasis/vim-devicons'
+Plugin 'vim-scripts/EasyGrep'
+
 call vundle#end()
+
+set encoding=UTF-8
 
 map L $
 map H ^
+
+set completeopt-=preview
 
 inoremap <expr><TAB>  pumvisible() ? "\<C-n>" : "\<TAB>"
 
@@ -34,6 +41,8 @@ let g:necoghc_enable_detailed_browse = 1
 let g:NERDTrimTrailingWhitespace = 1
 let g:NERDSpaceDelims = 1
 let g:NERDAltDelims_haskell = 1
+let NERDTreeIgnore = ['\.pyc$']
+
 
 nnoremap <c-_> :call NERDComment('n',"toggle")<CR>j
 " vnoremap <c-_> :call NERDComment('x',"toggle")<CR>
@@ -117,6 +126,10 @@ set number
 nmap <S-CR> :a<CR><CR>.<CR>i
 
 map <C-d> *#
+
+map gn :bn<cr>
+map gp :bp<cr>
+map gd :bd<cr>
 
 let mapleader=" "
 noremap <Leader>s :update<CR>

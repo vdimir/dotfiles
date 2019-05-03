@@ -1,0 +1,32 @@
+{
+    "telemetry.enableTelemetry": false,
+    "telemetry.enableCrashReporter": false,
+    "workbench.colorTheme": "Base16 Grayscale Light",
+    "editor.tokenColorCustomizations": {
+        "[Base16 Grayscale Light]": {
+            "functions": "#404060",
+            "variables": "#404060",
+            "keywords": "#303030",
+        }
+    },
+    "workbench.colorCustomizations": {
+        "[Base16 Grayscale Light]": {
+            "editor.background": "#F7F8F8",
+            "editorCursor.foreground": "#464646",
+            "editor.foreground": "#303030",
+            "editor.wordHighlightBorder": "#303030",
+            // "editor.selectionHighlightBackground": "#00000000",
+            "editor.selectionHighlightBorder": "#ababab55",
+            "editor.findMatchHighlightBackground": "#FFEEAAAA",
+            "editor.findMatchBackground": "#FFDDAA",
+        }
+    },
+    "editor.fontFamily": "'Fira Code'",
+    "editor.fontSize": 15,
+    "editor.fontLigatures": true,
+    "editor.formatOnSave": true,
+    "files.hotExit": "off",
+    "files.autoSave": "onFocusChange",
+    "editor.wordSeparators": "`~!@#$%^&*()-=+[{]}\\|;:'\",.<>/?",
+    "editor.occurrencesHighlight": false,
+}

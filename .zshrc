@@ -49,7 +49,7 @@ zstyle ':vcs_info:git*' formats "%{$fg[blue]%}(%b%{$fg[blue]%} %m%u%c)%{$reset_c
 zstyle ':vcs_info:*' check-for-changes true
 PROMPT=$' %{\e[1;34m%}%(5~|%-1~/.../%2~|%~) %{\e[1;34m%}%#%{\e[0m%} '
 # RPROMPT='%T'
-RPROMPT='${vcs_info_msg_0_} %T'
+RPROMPT='${vcs_info_msg_0_}'
 if [[ $+MC_SID = 1 ]] ; then
         # inside Midnight Commander? Just give us a basic prompt
         PROMPT=">%(#/#/) "
@@ -84,6 +84,8 @@ alias -g L='|less'
 alias -g C='|wc -l'
 alias -g N='>/dev/null 2>&1'
 alias -g XC='|xclip -i -sel clipboard'
+alias -g xc='xclip -i -sel clipboard'
+alias -g xo='xclip -o -sel clipboard'
 
 alias cdp='popd'
 alias gis='git status'
@@ -160,7 +162,6 @@ bindkey "[3;3~"  delete-word
 export LANG=en_US.UTF-8
 
 stty -ixon
-# eval $(thefuck --alias)
 
 autoload -U +X compinit && compinit
 autoload -U +X bashcompinit && bashcompinit

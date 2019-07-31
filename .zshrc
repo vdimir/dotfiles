@@ -3,6 +3,7 @@ HISTSIZE=10000
 SAVEHIST=10000
 
 fpath=(~/.zsh/site-functions $fpath)
+fpath=(~/.zsh $fpath)
 # fpath+=~/.zfunc
 
 source /usr/share/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh>/dev/null 2>&1 || source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh>/dev/null 2>&1 || source /usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh>/dev/null 2>&1

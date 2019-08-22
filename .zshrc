@@ -1,6 +1,6 @@
 HISTFILE=~/.zhistfile
-HISTSIZE=10000
-SAVEHIST=10000
+HISTSIZE=50000
+SAVEHIST=50000
 
 fpath=(~/.zsh/site-functions $fpath)
 fpath=(~/.zsh $fpath)
@@ -90,6 +90,8 @@ alias -g xo='xclip -o -sel clipboard'
 
 alias cdp='popd'
 alias gis='git status'
+
+alias br='printf "=%.0s" {1..$(tput cols)}; echo'
 
 function b () {
     echo "scale=3; $@" | bc 

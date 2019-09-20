@@ -8,6 +8,7 @@ fpath=(~/.zsh $fpath)
 
 source /usr/share/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh>/dev/null 2>&1 || source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh>/dev/null 2>&1 || source /usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh>/dev/null 2>&1
 source ~/.zsh/zprofile.sh>/dev/null 2>&1
+source ~/.zsh/zprofile.`uname`.sh>/dev/null 2>&1
 
 setopt HIST_IGNORE_ALL_DUPS
 setopt HIST_REDUCE_BLANKS
@@ -22,7 +23,6 @@ zstyle ':completion:*:processes' command 'ps -xuf'
 zstyle ':completion:*:processes' sort false
 zstyle ':completion:*:processes-names' command 'ps xho command'
 
-eval `dircolors`
 zstyle ':completion:*:default' list-colors ${(s.:.)LS_COLORS}
 zstyle ':completion:*:functions' ignored-patterns '_*'
 zstyle ':completion:*' completer _expand _complete _ignored
@@ -56,9 +56,6 @@ if [[ $+MC_SID = 1 ]] ; then
         RPROMPT=""
 fi
 
-
-
-alias ls='ls --group-directories-first --color=auto -v'
 alias dir='dir --color=auto'
 alias vdir='vdir --color=auto'
 alias grep='grep --color=auto'

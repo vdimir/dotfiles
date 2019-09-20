@@ -1,0 +1,15 @@
+[
+    { "keys": ["ctrl+m"], "command": "toggle_minimap" },
+    {
+        "keys": ["super+g"], "command": "find_under",
+        "context": [
+            { "key": "selection_empty", "operator": "equal", "operand": false}
+        ]
+    },
+    {
+        "keys": ["super+shift+g"], "command": "find_under_prev",
+        "context": [
+            { "key": "selection_empty", "operator": "equal", "operand": false}
+        ]
+    },
+]

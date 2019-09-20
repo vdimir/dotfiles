@@ -30,6 +30,16 @@
         "when": "editorFocus"
     },
     {
+        "key": "cmd+g",
+        "command": "-editor.action.nextMatchFindAction",
+        "when": "editorFocus"
+    },
+    {
+        "key": "cmd+g",
+        "command": "editor.action.nextSelectionMatchFindAction",
+        "when": "editorFocus"
+    },
+    {
         "key": "ctrl+f3",
         "command": "-editor.action.nextSelectionMatchFindAction",
         "when": "editorFocus"
@@ -65,5 +75,15 @@
     {
         "key": "ctrl+j",
         "command": "editor.action.joinLines"
+    },
+    {
+        "key": "shift+alt+down",
+        "command": "cursorColumnSelectDown",
+        "when": "textInputFocus"
+    },
+    {
+        "key": "shift+alt+up",
+        "command": "cursorColumnSelectUp",
+        "when": "textInputFocus"
     }
 ]

@@ -4,11 +4,12 @@ SAVEHIST=50000
 
 fpath=(~/.zsh/site-functions $fpath)
 fpath=(~/.zsh $fpath)
-# fpath+=~/.zfunc
 
 source /usr/share/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh>/dev/null 2>&1 || source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh>/dev/null 2>&1 || source /usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh>/dev/null 2>&1
 source ~/.zsh/zprofile.sh>/dev/null 2>&1
 source ~/.zsh/zprofile.`uname`.sh>/dev/null 2>&1
+source ~/.profile>/dev/null 2>&1
+source ~/.zsh/zfunctions.sh>/dev/null 2>&1
 
 setopt HIST_IGNORE_ALL_DUPS
 setopt HIST_REDUCE_BLANKS
@@ -31,7 +32,7 @@ zstyle ':completion:*' use-compctl false
 
 autoload -Uz compinit
 compinit
-export WORDCHARS='*?_-.[]~=&;!#$%^(){}<>'
+export WORDCHARS='*?_-.[]~=&;!#$%^(){}<>&'
 
 setopt prompt_subst
 autoload -Uz vcs_info
@@ -48,6 +49,9 @@ zstyle ':vcs_info:git*' formats " %b %m%u%c"
 zstyle ':vcs_info:git*' formats "%{$fg[blue]%}(%b%{$fg[blue]%} %m%u%c)%{$reset_color%}"
 zstyle ':vcs_info:*' check-for-changes true
 PROMPT=$' %{\e[1;34m%}%(5~|%-1~/.../%2~|%~) %{\e[1;34m%}%#%{\e[0m%} '
+if [ -z $PROMPT_SUPPRESS_HOST ]; then
+  PROMPT=' %m'$PROMPT
+fi
 # RPROMPT='%T'
 RPROMPT='${vcs_info_msg_0_}'
 if [[ $+MC_SID = 1 ]] ; then
@@ -61,7 +65,6 @@ alias vdir='vdir --color=auto'
 alias grep='grep --color=auto'
 alias fgrep='fgrep --color=auto'
 alias egrep='egrep --color=auto'
-alias diff='colordiff'
 
 alias mv='nocorrect mv'
 alias cp='nocorrect cp'
@@ -89,34 +92,6 @@ alias gis='git status'
 
 alias br='printf "=%.0s" {1..$(tput cols)}; echo'
 
-function b () {
-    echo "scale=3; $@" | bc 
-}
-alias b='noglob b'
-
-function venv () {
-  CURDIR=`pwd`
-  if [ ! -z "$1" ]; then
-      cd "$1"
-  fi
-  ACTIVATEPATH="/bin/activate"
-  VENVDIRS=("$@" "venv" ".env" "venv2")
-  while [[ `pwd` != "/" ]]; do
-    for DIR in $VENVDIRS; do
-      FILE=$DIR$ACTIVATEPATH
-      if [ -f $FILE ]; then
-        echo "Activating venv."
-        export PYTHONPATH=`pwd`
-        source $FILE
-        cd $CURDIR
-        return
-      fi
-    done
-    cd ..
-  done
-  echo "Virtual env not found."
-  cd $CURDIR
-}
 
 bindkey "\e\e[D" backward-word
 bindkey "\e\e[C" forward-word

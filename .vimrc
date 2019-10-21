@@ -16,7 +16,7 @@ Plugin 'tpope/vim-repeat'
 Plugin 'jpalardy/vim-slime'
 Plugin 'Shougo/neocomplete.vim'
 Plugin 'scrooloose/nerdcommenter'
-Plugin 'ryanoasis/vim-devicons'
+" Plugin 'ryanoasis/vim-devicons'
 Plugin 'vim-scripts/EasyGrep'
 
 call vundle#end()

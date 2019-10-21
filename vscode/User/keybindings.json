@@ -30,14 +30,24 @@
         "when": "editorFocus"
     },
     {
+        "key": "cmd+shift+g",
+        "command": "editor.action.previousMatchFindAction",
+        "when": "editorFocus"
+    },
+    {
+        "key": "cmd+shift+g",
+        "command": "editor.action.previousSelectionMatchFindAction",
+        "when": "editorHasSelection && editorFocus"
+    },
+    {
         "key": "cmd+g",
-        "command": "-editor.action.nextMatchFindAction",
+        "command": "editor.action.nextMatchFindAction",
         "when": "editorFocus"
     },
     {
         "key": "cmd+g",
         "command": "editor.action.nextSelectionMatchFindAction",
-        "when": "editorFocus"
+        "when": "editorHasSelection && editorFocus"
     },
     {
         "key": "ctrl+f3",
@@ -85,5 +95,19 @@
         "key": "shift+alt+up",
         "command": "cursorColumnSelectUp",
         "when": "textInputFocus"
+    },
+    {
+        "key": "cmd+k",
+        "command": "-workbench.action.terminal.clear",
+        "when": "terminalFocus"
+    },
+    {
+        "key": "cmd+k",
+        "command": "workbench.action.terminal.focus"
+    },
+    {
+        "key": "cmd+k",
+        "command": "workbench.action.closePanel"
+        "when": "terminalFocus"
     }
 ]

@@ -1,11 +1,13 @@
 {
 	"always_show_minimap_viewport": true,
+	"color_scheme": "Packages/Color Scheme - MyOwn/myown-light.sublime-color-scheme",
 	"file_exclude_patterns":
 	[
 		"*.pyc",
 		"*.npy",
 		"*.ipynb"
 	],
+	"find_selected_text": true,
 	"folder_exclude_patterns":
 	[
 		".svn",
@@ -24,7 +26,6 @@
 		"subpixel_antialias"
 	],
 	"font_size": 14.5,
-	"ui_scale": 1.1,
 	"highlight_line": true,
 	"hot_exit": false,
 	"ignored_packages":
@@ -45,5 +46,5 @@
 	"tab_size": 4,
 	"translate_tabs_to_spaces": true,
 	"trim_trailing_white_space_on_save": true,
-	"find_selected_text": true
+	"ui_scale": 1.1
 }

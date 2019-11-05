@@ -5,7 +5,8 @@
 	[
 		"*.pyc",
 		"*.npy",
-		"*.ipynb"
+		"*.ipynb",
+		".DS_Store"
 	],
 	"find_selected_text": true,
 	"folder_exclude_patterns":

@@ -96,9 +96,6 @@ alias br='printf "=%.0s" {1..$(tput cols)}; echo'
 bindkey "\e\e[D" backward-word
 bindkey "\e\e[C" forward-word
 
-bindkey "^[OA" history-search-backward
-bindkey "^[OB" history-search-forward
-
 bindkey '\e\eOC' forward-word
 bindkey '\e\eOD' backward-word
 bindkey '\e[5C' forward-word
@@ -118,8 +115,8 @@ bindkey '^[[1~'  beginning-of-line
 bindkey '^[[4~'  end-of-line
 bindkey '^[[A' history-beginning-search-backward
 bindkey '^[[B' history-beginning-search-forward
-# bindkey '^[[A' up-line-or-search
-# bindkey '^[[B' down-line-or-search
+bindkey '^[OA' history-beginning-search-backward
+bindkey '^[OB' history-beginning-search-forward
 bindkey '\e[3~' delete-char
 bindkey "^[[1;3C" forward-word
 bindkey "^[[1;3D" backward-word

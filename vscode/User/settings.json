@@ -1,44 +1,158 @@
 {
     "telemetry.enableTelemetry": false,
     "telemetry.enableCrashReporter": false,
+    "editor.links": false,
     "editor.tokenColorCustomizations": {
-        "[Base16 Light Grayscale]": {
+        "[Base16 Grayscale Light]": {
+            "comments": {
+                "fontStyle": "",
+                "foreground": "#606070"
+            },
             "functions": "#404060",
             "variables": "#404060",
-            "keywords": "#303030",
-            "types": "#606060",
-            "strings": "#606060"
+            "keywords": "#404040",
+            "types": "#303030",
+            "strings": "#303050",
+            "textMateRules": [
+                {
+                    "scope": "entity.name.import.go",
+                    "settings": {
+                        "fontStyle": ""
+                    }
+                },
+                {
+                    "scope": "entity.name.type.class",
+                    "settings": { "foreground": "#202020" }
+                },
+                {
+                    "scope": "entity.name.function",
+                    "settings": { "foreground": "#202020" }
+                },
+                {
+                    "scope": "entity.name",
+                    "settings": { "foreground": "#202020" }
+                }
+            ]
+        },
+        "[Base16 Grayscale Dark]": {
+            "comments": {
+                "fontStyle": "",
+                "foreground": "#a0a0a0"
+            },
+            "functions": "#d4d4d4",
+            "variables": "#a0a0a0",
+            "keywords": "#a0a0a0",
+            "types": "#a0a0a0",
+            "strings": "#a0a0a0",
+            "textMateRules": [
+                {
+                    "scope": "entity.name.import.go",
+                    "settings": {
+                        "fontStyle": ""
+                    }
+                },
+                {
+                    "scope": "entity.name.type.class",
+                    "settings": { "foreground": "#d4d4d4" }
+                },
+                {
+                    "scope": "entity.name.function",
+                    "settings": { "foreground": "#d4d4d4" }
+                },
+                {
+                    "scope": "entity.name",
+                    "settings": { "foreground": "#d4d4d4" }
+                }
+            ]
         }
     },
     "workbench.colorCustomizations": {
-        "[Base16 Light Grayscale]": {
-            "editor.background": "#FCFEFE",
-            "editorCursor.foreground": "#464646",
-            "editor.foreground": "#303030",
+        "[Base16 Grayscale Light]": {
+            "editor.background": "#f8f8fa",
+            "editorCursor.foreground": "#404040",
+            "editor.foreground": "#404040",
             "editor.wordHighlightBorder": "#303030",
-            // "editor.selectionHighlightBackground": "#00000000",
+            // "editor.selectionHighlightBackground": "#f0f0f0",
             "editor.selectionHighlightBorder": "#ababab55",
             "editor.findMatchHighlightBackground": "#FFEEAAAA",
             "editor.findMatchBackground": "#FFDDAA",
+        },
+        "[Base16 Grayscale Dark]": {
+            "editor.background": "#1e1e1e",
+            "editorCursor.foreground": "#d4d4d4",
+            "editor.foreground": "#d4d4d4",
         }
     },
     "editor.rulers": [140],
-    "editor.fontFamily": "'Fira Code'",
-    "editor.fontSize": 13,
+    "editor.fontFamily": "'JetBrains Mono'",
     "editor.fontLigatures": true,
     "files.hotExit": "off",
     "files.autoSave": "onFocusChange",
     "editor.wordSeparators": "`~!@#$%^&*()-=+[{]}\\|;:'\",.<>/?",
     "editor.occurrencesHighlight": false,
-    "search.location": "panel",
-    "window.zoomLevel": 1,
+    "window.zoomLevel": 0,
     "editor.renderWhitespace": "selection",
     "workbench.sideBar.location": "left",
     "git.ignoreLegacyWarning": true,
-    "files.trimTrailingWhitespace": true,
     "window.restoreWindows": "none",
     "editor.codeLens": false,
-    "git.autorefresh": false,
-    "editor.minimap.enabled": true,
-    "workbench.colorTheme": "Base16 Light Grayscale",
+    "git.autorefresh": true,
+    "git.detectSubmodules": false,
+    "editor.minimap.enabled": false,
+    "workbench.colorTheme": "Base16 Grayscale Light",
+    "rust-client.disableRustup": true,
+    "search.searchOnType": false,
+    "go.useLanguageServer": true,
+    "workbench.startupEditor": "welcomePageInEmptyWorkbench",
+    "nasc-touchbar.addCursorBelow": false,
+    "nasc-touchbar.goToDefinition": false,
+    "nasc-touchbar.rename": false,
+    "nasc-touchbar.showCommands": false,
+    "cmake.configureOnOpen": true,
+    "python.showStartPage": false,
+    "github.gitAuthentication": false,
+    "githubPullRequests.telemetry.enabled": false,
+    "editor.minimap.showSlider": "always",
+    "editor.fontSize": 13,
+    "files.insertFinalNewline": true,
+    "clangd.path": "/Users/vdimir/Library/Application Support/Code/User/globalStorage/llvm-vs-code-extensions.vscode-clangd/install/12.0.1/clangd_12.0.1/bin/clangd",
+    "githubPullRequests.fileListLayout": "tree",
+    "remoteHub.search.download.enabled": true,
+    "editor.trimAutoWhitespace": true,
+    "files.trimTrailingWhitespace": true,
+    "python.defaultInterpreterPath": "/Users/vdimir/.venvs/venv3/bin/python",
+    "[plaintext]": {
+        "editor.trimAutoWhitespace": false,
+        "files.trimTrailingWhitespace": false
+    },
+    "terminal.integrated.shell.osx": "/bin/zsh",
+    "gitlens.hovers.currentLine.over": "line",
+    "gitlens.advanced.telemetry.enabled": false,
+    "gitlens.blame.avatars": false,
+    "gitlens.blame.format": "[${author|7}] ${message|5} ${agoOrDate|10-}",
+    "C_Cpp.intelliSenseEngine": "Disabled",
+    "files.watcherExclude": {
+        "contrib/": true
+    },
+    "search.exclude": {
+        "contrib/": true
+    },
+    "terminal.integrated.profiles.windows": {
+
+        "PowerShell": {
+            "source": "PowerShell",
+            "icon": "terminal-powershell"
+        },
+        "Command Prompt": {
+            "path": [
+                "${env:windir}\\Sysnative\\cmd.exe",
+                "${env:windir}\\System32\\cmd.exe"
+            ],
+            "args": [],
+            "icon": "terminal-cmd"
+        },
+        "Git Bash": {
+            "source": "Git Bash"
+        }
+    }
 }

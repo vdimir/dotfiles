@@ -8,7 +8,7 @@ set encoding=UTF-8
 map L $
 map H ^
 
-set paste
+set nopaste
 
 filetype plugin indent on
 set keymap=russian-jcukenwin
@@ -72,5 +72,6 @@ inoremap <C-s> <ESC>:update<cr>
 set showcmd
 
 set t_ut=
+set t_vb=
 
 colorscheme plain

@@ -42,3 +42,7 @@ function while_proc_exists () {
     return $exit_status
 }
 
+
+function mkcd (){ mkdir -p -- "$1" && cd -P -- "$1"}
+
+

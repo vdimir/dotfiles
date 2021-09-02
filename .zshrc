@@ -1,9 +1,13 @@
+# zmodload zsh/zprof
+
 HISTFILE=~/.zhistfile
 HISTSIZE=50000
 SAVEHIST=50000
 
 fpath=(~/.zsh/site-functions $fpath)
-fpath=(~/.zsh $fpath)
+fpath=(~/.zsh ~/.zfunc $fpath)
+fpath=(/usr/local/share/zsh/site-functions $fpath)
+
 
 source /usr/share/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh>/dev/null 2>&1 || source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh>/dev/null 2>&1 || source /usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh>/dev/null 2>&1
 source ~/.zsh/zprofile.sh>/dev/null 2>&1
@@ -16,7 +20,7 @@ setopt HIST_REDUCE_BLANKS
 setopt HIST_IGNORE_SPACE
 setopt INC_APPEND_HISTORY
 
-setopt appendhistory extendedglob nomatch notify autocd auto_pushd
+setopt appendhistory nomatch notify autocd auto_pushd
 unsetopt beep
 bindkey -e
 
@@ -30,23 +34,29 @@ zstyle ':completion:*' completer _expand _complete _ignored
 zstyle ':completion:*' menu select
 zstyle ':completion:*' use-compctl false
 
-autoload -Uz compinit
-compinit
-export WORDCHARS='*?_-.[]~=&;!#$%^(){}<>&'
+export WORDCHARS=''
 
 setopt prompt_subst
 autoload -Uz vcs_info
 zstyle ':vcs_info:*' enable git
 
-precmd() {
-    #tmux set -qg status-left "#S #P $(pwd)"
+periodic() {
+    GITBR=$(git branch --show-current 2>/dev/null | sed -E 's/^(.{10}).+$/\1.../')
+    # GITBR=$(git branch --show-current 2>/dev/null | cut -c 1-10)
+    [ ! -z $GITBR ] && GITBR=" [$GITBR]"
+    print -Pn "\033]0;`basename $PWD`$GITBR\007"
     vcs_info
     rehash
 }
 
+PERIOD=2
+
+precmd() {
+}
+
 autoload -U colors && colors
 zstyle ':vcs_info:git*' formats " %b %m%u%c"
-zstyle ':vcs_info:git*' formats "%{$fg[blue]%}(%b%{$fg[blue]%} %m%u%c)%{$reset_color%}"
+zstyle ':vcs_info:git*' formats "%{$fg[blue]%}%b%{$fg[blue]%} %m%u%c%{$reset_color%}"
 zstyle ':vcs_info:*' check-for-changes true
 PROMPT=$' %{\e[1;34m%}%(5~|%-1~/.../%2~|%~) %{\e[1;34m%}%#%{\e[0m%} '
 if [ -z $PROMPT_SUPPRESS_HOST ]; then
@@ -62,7 +72,7 @@ fi
 
 alias dir='dir --color=auto'
 alias vdir='vdir --color=auto'
-alias grep='grep --color=auto'
+alias grep='egrep --color=auto'
 alias fgrep='fgrep --color=auto'
 alias egrep='egrep --color=auto'
 
@@ -77,10 +87,12 @@ alias l='ls -lah'
 alias lla='ls -lah'
 alias du='du -h'
 alias df='df -h'
-alias -g G='|grep'
+alias -g G='|grep -E'
 alias -g T='|tail'
 alias -g H='|head'
 alias -g L='|less'
+alias -g J='|jq'
+alias -g JL='|jq . | less'
 alias -g C='|wc -l'
 alias -g N='>/dev/null 2>&1'
 alias -g XC='|xclip -i -sel clipboard'
@@ -124,7 +136,7 @@ bindkey "^[[1;3D" backward-word
 bindkey "^[[3^" delete-word
 bindkey "^[[3"  delete-word
 
-export PATH=$HOME/.local/bin:$HOME/.usr/bin:$PATH
+export PATH=/usr/local/bin:$HOME/.local/bin:$HOME/.usr/bin:$HOME/.scripts:$PATH
 
 bindkey "[3;5~"  delete-word
 bindkey "[3;3~"  delete-word
@@ -134,7 +146,9 @@ export LANG=en_US.UTF-8
 
 stty -ixon
 
-autoload -U +X compinit && compinit
-autoload -U +X bashcompinit && bashcompinit
+# autoload -U +X compinit && compinit
+# autoload -U +X bashcompinit && bashcompinit
+
+# zprof
 
 

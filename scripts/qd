@@ -1,0 +1,452 @@
+#!/bin/bash
+
+# ===
+# Script for controlling remote development server for ClickHouse build
+# ===
+
+set -ue
+
+BLUE_FG=`tput setaf 4`
+SECOND_FG=`tput setaf 1`
+NC_COLOR=`tput sgr0`
+
+CLANG_VERSION=13
+DEFAULT_QUERY_FILE=~/work/main.sql
+
+findroot () {
+    if [[ ! -z "${NOCHECKRC:-}" ]]; then
+        return
+    fi
+
+    CURDIR=`pwd`
+    LOOKUPPATH=".qdenv"
+    dir_changed=false
+    while [[ `pwd` != "/" ]]
+    do
+        if [ -f $LOOKUPPATH ]
+        then
+                if [ "$dir_changed" = true ] ; then
+                    echo "${SECOND_FG}$LOOKUPPATH found: `pwd`${NC_COLOR}" >&2
+                fi
+                LOCAL_PROJECT_ROOT=$(pwd)
+                source $LOOKUPPATH
+
+                if [ "$LOCAL_PROJECT_ROOT" != $(pwd) ] ; then
+                    echo "${SECOND_FG}Project root: $LOCAL_PROJECT_ROOT${NC_COLOR}" >&2
+                fi
+                return
+        fi
+        dir_changed=true
+        cd ..
+    done
+    echo "$LOOKUPPATH not found!" >&2
+    exit 1
+}
+
+findroot
+
+PROJECT_SUFFIX=${PROJECT_SUFFIX:-"$(echo ${LOCAL_PROJECT_ROOT} | grep -oE "ClickHouse\w*" | cut -c11-)"}
+BUILD_TYPE=${BUILD_TYPE:-debug}
+REMOTE_BUILD_ROOT=${REMOTE_BUILD_ROOT:-"~/build${PROJECT_SUFFIX}"}
+REMOTE_DATA_ROOT=${REMOTE_DATA_ROOT:-${REMOTE_BUILD_ROOT}/_data}
+REMOTE_SOURCE_ROOT=${REMOTE_SOURCE_ROOT:-"/Users/vdimir/ClickHouse${PROJECT_SUFFIX}"}
+REMOTE_LOG_FILENAME=${REMOTE_LOG_FILENAME:-_server.log}
+
+COMMAND_NAME=$(basename $0)
+
+list_commands(){
+    echo "    'getbinary:donwload ClickHouse binary from specified GitHub releases link'"
+    echo "    'brun:build and run'"
+    echo "    'build:build ClickHouse on remote server'"
+    echo "    'clear:clear screen'"
+    echo "    'client:run client'"
+    echo "    'cmake:initalize CMake'"
+    echo "    'dlog:download log from remote server'"
+    echo "    'exec:execute command via ssh'"
+    echo "    'forward_port:start port forwarding'"
+    echo "    'gdb:run ClickHouse on remote server with gdb'"
+    echo "    'git_status:show git status on remote server'"
+    echo "    'git_update:git reset & pull on remote server'"
+    echo "    'help:how help'"
+    echo "    'info:show environment variables setup'"
+    echo "    'kill:kill ClickHouse on remote server'"
+    echo "    'log:show log from remote server'"
+    echo "    'ping:ping server in a loop until success'"
+    echo "    'ps:show runned clickhouse processes'"
+    echo "    'query:run query from sql file'"
+    echo "    'rrun:run in tmux pane'"
+    echo "    'run:run ClickHouse on remote server'"
+    echo "    'ssh:open shell on remote server'"
+    echo "    'sync:upload source code to remote server'"
+    echo "    'syncall:upload code including cmake files and other stuff to remote server'"
+    echo "    'synctest:upload tests to remote server'"
+    echo "    'taillog:tail log from remote server'"
+    echo "    'test:run test'"
+    echo "    'zshcompletion:generate autocomletion for zsh, just run \"`basename ${0}` zshcompletion > ~/.zsh/_`basename ${0}` && exec zsh\"'"
+}
+
+sub_help(){
+    echo "Usage: ${COMMAND_NAME} <subcommand> [options]"
+    echo "Subcommands:"
+    list_commands | sed "s/'//g" | sed "s/:/ -- /g" 
+    echo ""
+}
+  
+sub_info(){
+    echo "PROJECT_SUFFIX=${PROJECT_SUFFIX}"
+    echo "DEVSERV=${DEVSERV}"
+    echo "LOCAL_PROJECT_ROOT=${LOCAL_PROJECT_ROOT}"
+    echo "BUILD_TYPE=${BUILD_TYPE}"
+    echo "REMOTE_BUILD_ROOT=${REMOTE_BUILD_ROOT}"
+    echo "REMOTE_DATA_ROOT=${REMOTE_DATA_ROOT}"
+    echo "REMOTE_SOURCE_ROOT=${REMOTE_SOURCE_ROOT}"
+    echo "REMOTE_LOG_FILENAME=${REMOTE_LOG_FILENAME}"
+    echo "Builds: "
+    ssh -tt $DEVSERV "du -sh ${REMOTE_BUILD_ROOT}/*"
+
+}
+
+sub_zshcompletion(){
+    echo "#compdef ${COMMAND_NAME}"
+    echo "local -a subcmds"
+    echo "subcmds=("
+    list_commands
+    echo ")"
+    echo "_describe 'command' subcmds"
+    echo "_alternative 'files:filename:_files'"
+}
+
+sub_forward_port(){
+    sub_forward_port_down || echo 'not forwarding ...'
+    ssh -fNTML 9000:localhost:9000 $DEVSERV
+}
+
+sub_forward_port_check(){
+    ssh -TO check $DEVSERV
+}
+
+sub_forward_port_down(){
+    ssh -TO exit $DEVSERV
+}
+
+sub_synctest(){
+    if [ ! -d "${LOCAL_PROJECT_ROOT}/src/" ]; then
+        echo "Cannot find src directory"
+        exit 1
+    fi
+
+    set -x
+    rsync ${1:-} -rvP --checksum -e ssh "${LOCAL_PROJECT_ROOT}/tests/" $DEVSERV:"${REMOTE_SOURCE_ROOT}/tests" | grep -v 'skipping non-regular file'
+}
+
+sub_syncall(){
+    if [ ! -d "${LOCAL_PROJECT_ROOT}/src/" ]; then
+        echo "Cannot find src directory"
+        exit 1
+    fi
+
+    set -x
+    rsync ${1:-} -rvP --checksum -e ssh "${LOCAL_PROJECT_ROOT}/docker/" $DEVSERV:"${REMOTE_SOURCE_ROOT}/docker"  | grep -v 'skipping non-regular file'
+    rsync ${1:-} -rvP --checksum -e ssh "${LOCAL_PROJECT_ROOT}/base/" $DEVSERV:"${REMOTE_SOURCE_ROOT}/base"  | grep -v 'skipping non-regular file'
+    rsync ${1:-} -rvP --checksum -e ssh "${LOCAL_PROJECT_ROOT}/src/" $DEVSERV:"${REMOTE_SOURCE_ROOT}/src"  | grep -v 'skipping non-regular file'
+    rsync ${1:-} -rvP --checksum -e ssh "${LOCAL_PROJECT_ROOT}/cmake/" $DEVSERV:"${REMOTE_SOURCE_ROOT}/cmake"  | grep -v 'skipping non-regular file'
+    rsync ${1:-} -rvP --checksum -e ssh "${LOCAL_PROJECT_ROOT}/contrib/CMakeLists.txt" $DEVSERV:"${REMOTE_SOURCE_ROOT}/contrib/CMakeLists.txt"  | grep -v 'skipping non-regular file'
+    rsync ${1:-} -rvP --checksum -e ssh "${LOCAL_PROJECT_ROOT}/CMakeLists.txt" $DEVSERV:"${REMOTE_SOURCE_ROOT}/CMakeLists.txt"  | grep -v 'skipping non-regular file'
+    rsync ${@:-} -rvP --checksum -e ssh "${LOCAL_PROJECT_ROOT}/programs/" $DEVSERV:"${REMOTE_SOURCE_ROOT}/programs"  | grep -v 'skipping non-regular file'
+}
+
+sub_sync(){
+    echo "${BLUE_FG}Building directory ${REMOTE_BUILD_ROOT}/${BUILD_TYPE}${NC_COLOR}" >&2
+
+    if [ ! -d "${LOCAL_PROJECT_ROOT}/src/" ]; then
+        echo "Cannot find src directory"
+        exit 1
+    fi
+    set -x
+    rsync ${@:-} -rvP --checksum -e ssh "${LOCAL_PROJECT_ROOT}/src/" $DEVSERV:"${REMOTE_SOURCE_ROOT}/src"
+    rsync ${@:-} -rvP --checksum -e ssh "${LOCAL_PROJECT_ROOT}/programs/" $DEVSERV:"${REMOTE_SOURCE_ROOT}/programs"  | grep -v 'skipping non-regular file'
+}
+
+sub_cmake(){
+    ssh -tt $DEVSERV "mkdir -p ${REMOTE_BUILD_ROOT}/${BUILD_TYPE}"
+
+    ARGS=""
+    if [[ ${1:-""} == "small" ]]; then
+        ARGS="${ARGS} -DENABLE_CLICKHOUSE_ALL=OFF"
+        ARGS="${ARGS} -DENABLE_CLICKHOUSE_SERVER=ON"
+        ARGS="${ARGS} -DENABLE_CLICKHOUSE_CLIENT=ON"
+        ARGS="${ARGS} -DENABLE_LIBRARIES=OFF"
+        ARGS="${ARGS} -DENABLE_UTILS=OFF"
+        ARGS="${ARGS} -DENABLE_CLICKHOUSE_ALL=OFF"
+        ARGS="${ARGS} -DENABLE_TESTS=OFF"
+        ARGS="${ARGS} -DUSE_UNWIND=ON"
+    else
+        ARGS="${ARGS} -DENABLE_CLICKHOUSE_ALL=ON"
+    fi
+
+    case ${BUILD_TYPE} in
+    "reldeb")
+        ARGS="${ARGS} -DCMAKE_BUILD_TYPE=RelWithDebInfo"
+    ;;
+    "debug")
+        ARGS="${ARGS} -DCMAKE_BUILD_TYPE=Debug"
+    ;;
+    "asan")
+        ARGS="${ARGS} -DCMAKE_BUILD_TYPE=RelWithDebInfo"
+        ARGS="${ARGS} -DSANITIZE=address"
+    ;;
+    "msan")
+        ARGS="${ARGS} -DCMAKE_BUILD_TYPE=RelWithDebInfo"
+        ARGS="${ARGS} -DSANITIZE=memory"
+    ;;
+    "tsan")
+        ARGS="${ARGS} -DCMAKE_BUILD_TYPE=RelWithDebInfo"
+        ARGS="${ARGS} -DSANITIZE=address"
+    ;;
+    "ubsan")
+        ARGS="${ARGS} -DCMAKE_BUILD_TYPE=RelWithDebInfo"
+        ARGS="${ARGS} -DSANITIZE=undefined"
+    ;;
+    *)
+        echo "Unknown build type '${BUILD_TYPE}'"
+        exit 1
+        ;;
+    esac
+
+    set -x
+    ssh -tt $DEVSERV "sleep 3s && cmake -S ${REMOTE_SOURCE_ROOT} \
+        -B ${REMOTE_BUILD_ROOT}/${BUILD_TYPE} \
+        -DCMAKE_C_COMPILER=\`which clang-${CLANG_VERSION}\` \
+        -DCMAKE_CXX_COMPILER=\`which clang++-${CLANG_VERSION}\` \
+        ${ARGS}"
+}
+
+sub_build(){
+    sub_sync
+    if [[ ${1:-""} == "all" ]]; then
+        ssh -tt $DEVSERV "ninja -C ${REMOTE_BUILD_ROOT}/${BUILD_TYPE}"
+    else
+        ssh -tt $DEVSERV "ninja -C ${REMOTE_BUILD_ROOT}/${BUILD_TYPE} clickhouse-server clickhouse-client"
+    fi
+}
+
+sub_kill(){
+    if [[ ${1:-""} == "h" ]]; then
+        ssh $DEVSERV "ps aux | grep clickhouse-server | awk '{print \$2}' | grep -v grep | xargs sudo kill -9" || echo "Not Running"
+    else
+        ssh $DEVSERV "cat ${REMOTE_DATA_ROOT}/status | grep 'PID: ' | awk '{ print \$2}' | xargs -r kill -9" || echo "Not Running"
+    fi
+}
+
+sub_gdb(){
+    set -x
+    echo "Running debugger ${REMOTE_BUILD_ROOT}/${BUILD_TYPE}/programs/clickhouse-server"
+    if [[ ${1:-""} == "g" ]]; then
+        ssh -tt $DEVSERV "mkdir -p ${REMOTE_DATA_ROOT} && cd ${REMOTE_DATA_ROOT} && gdb ${REMOTE_BUILD_ROOT}/${BUILD_TYPE}/programs/clickhouse-server"
+    else
+        ssh -tt $DEVSERV "mkdir -p ${REMOTE_DATA_ROOT} && cd ${REMOTE_DATA_ROOT} && lldb-11 ${REMOTE_BUILD_ROOT}/${BUILD_TYPE}/programs/clickhouse-server"
+    fi;
+}
+
+sub_run(){
+    set -x
+    if [[ ${1:-""} == "clean" ]]; then
+        ssh -tt $DEVSERV "rm -rf ${REMOTE_DATA_ROOT}"
+    fi
+
+    ssh -tt $DEVSERV "mkdir -p ${REMOTE_DATA_ROOT} && cd ${REMOTE_DATA_ROOT} && cp ${REMOTE_LOG_FILENAME} ${REMOTE_LOG_FILENAME}.`date +%Y%m%d_%H%M%S`; echo '' > ${REMOTE_LOG_FILENAME}"
+    echo "Running ${BLUE_FG}${REMOTE_BUILD_ROOT}/${BUILD_TYPE}${NC_COLOR}/programs/clickhouse-server"
+
+    if [[ ${1:-""} == "cfg" ]]; then
+        ssh -tt $DEVSERV "mkdir -p ${REMOTE_DATA_ROOT} && cd ${REMOTE_DATA_ROOT} && ${REMOTE_BUILD_ROOT}/${BUILD_TYPE}/programs/clickhouse-server -L ${REMOTE_LOG_FILENAME} --config ${REMOTE_SOURCE_ROOT}/programs/server/config.xml"
+    else
+        ssh -tt $DEVSERV "mkdir -p ${REMOTE_DATA_ROOT} && cd ${REMOTE_DATA_ROOT} && ${REMOTE_BUILD_ROOT}/${BUILD_TYPE}/programs/clickhouse-server -L ${REMOTE_LOG_FILENAME}"        
+    fi
+}
+
+sub_brun(){
+    sub_kill
+    sub_build
+    sub_run
+}
+
+sub_rrun(){
+    sub_kill
+    # tmux respawn-pane -k -t :.0 \
+    kitty @ launch --title Output --keep-focus sh -c "cd $HOME; \
+         NOCHECKRC=1 \
+         DEVSERV='${DEVSERV}' \
+         LOCAL_PROJECT_ROOT='${LOCAL_PROJECT_ROOT}' \
+         BUILD_TYPE='${BUILD_TYPE}' \
+         REMOTE_BUILD_ROOT='${REMOTE_BUILD_ROOT}' \
+         REMOTE_DATA_ROOT='${REMOTE_DATA_ROOT}' \
+         REMOTE_SOURCE_ROOT='${REMOTE_SOURCE_ROOT}' \
+         REMOTE_LOG_FILENAME='${REMOTE_LOG_FILENAME}' \
+         ${BASH_SOURCE} run"
+}
+
+sub_ping(){
+    while ! clickhouse-client $@ --query "SELECT 1 FORMAT Null" &>/dev/null; do 
+        sleep 0.5
+        echo -n '.'  >&2
+    done
+    echo  >&2
+}
+
+sub_client(){
+    sub_ping
+    ssh -tt $DEVSERV "${REMOTE_BUILD_ROOT}/${BUILD_TYPE}/programs/clickhouse client -mn $@"
+}
+
+sub_ps(){
+    ssh $DEVSERV "ps aux | grep clickhouse-server"
+}
+
+sub_log(){
+    ssh -tt $DEVSERV "cat ${REMOTE_DATA_ROOT}/${REMOTE_LOG_FILENAME}"
+}
+
+sub_dlog(){
+    TARGETPATH=${1:-clickhouse-server.log}
+    sub_log | pv > $TARGETPATH
+    echo "Log downloaded to `realpath $TARGETPATH`"
+}
+
+sub_clear(){
+    printf '\033[2J\033[3J\033[1;1H' >&2 ;
+    echo '-------------------------' >&2 ;
+}
+
+sub_taillog(){
+    sub_clear
+    if [ ! -z $@ ]; then
+        ssh -tt $DEVSERV "tail -f ${REMOTE_DATA_ROOT}/${REMOTE_LOG_FILENAME} | grep $@"
+    else
+        ssh -tt $DEVSERV "tail -f ${REMOTE_DATA_ROOT}/${REMOTE_LOG_FILENAME}"
+    fi
+}
+
+sub_query(){
+    ARG1=${1:-}
+    ARG2=${2:-}
+    if [ ! -f ${1:-} ]; then ARG1=''; ARG2=${1:-};  fi
+
+    if [[ ${ARG2:-""} != "2" ]]; then
+        sub_ping
+    fi
+
+    echo -n "${BLUE_FG}>>> "  >&2
+    basename `realpath ${ARG1:-${DEFAULT_QUERY_FILE}}` >&2
+    echo -n ${NC_COLOR}  >&2
+    if [[ ${ARG2:-""} == "tsv" ]]; then
+        clickhouse-client --queries-file ${ARG1:-${DEFAULT_QUERY_FILE}} -f TSV --progress --ignore-error
+    elif [[ ${ARG2:-""} == "null" ]]; then
+        clickhouse-client -t --queries-file ${ARG1:-${DEFAULT_QUERY_FILE}} -f Null --progress --ignore-error
+    elif [[ ${ARG2:-""} == "2" ]]; then
+        sub_ping --port 9002
+        clickhouse-client --queries-file ${ARG1:-${DEFAULT_QUERY_FILE}} --port 9002 -f PrettyCompactMonoBlock --progress --ignore-error
+    else
+        clickhouse-client --queries-file ${ARG1:-${DEFAULT_QUERY_FILE}} -f PrettyCompactMonoBlock --progress --ignore-error
+    fi
+}
+
+ssh_add_github(){
+    ssh-add -l | grep -qF 'vdimir@github' || ssh-add ~/.ssh/id_rsa_github
+}
+
+sub_git_status(){
+    ssh_add_github
+    ssh -tt $DEVSERV "git -C \"${REMOTE_SOURCE_ROOT}\" log  --abbrev-commit --format='%h (%ar) "%s" %d' -1; git -C \"${REMOTE_SOURCE_ROOT}\" status" 
+}
+
+sub_git_update(){
+    ssh_add_github
+    set -x
+    ssh -tt $DEVSERV "git -C \"${REMOTE_SOURCE_ROOT}\" reset --hard" 
+    ssh -tt $DEVSERV "sudo git -C \"${REMOTE_SOURCE_ROOT}\" clean -fdx"
+    if [[ ${1:-} == "" ]]; then
+        ssh -tt $DEVSERV "git -C \"${REMOTE_SOURCE_ROOT}\" checkout master" 
+    else
+        ssh -tt $DEVSERV "cd \"${REMOTE_SOURCE_ROOT}\" && gh pr checkout ${1} -R ClickHouse/ClickHouse --force" 
+    fi
+
+    ssh -tt $DEVSERV "git -C \"${REMOTE_SOURCE_ROOT}\" pull" 
+    ssh -tt $DEVSERV "git -C \"${REMOTE_SOURCE_ROOT}\" sup" 
+    echo "----------------------"
+    sub_git_status
+}
+
+sub_ssh(){
+    TERM=xterm-256color ssh -tA $DEVSERV "cd ${REMOTE_SOURCE_ROOT} ; exec $SHELL"
+}
+
+sub_exec(){
+    set -x
+    ssh -tA $DEVSERV "$@"
+}
+
+sub_getbinary(){
+
+    set -eux
+    DOWNLOAD_DIR="~/_tmp"
+
+    ssh $DEVSERV "cat > ${DOWNLOAD_DIR}/dld.sh && chmod +x ${DOWNLOAD_DIR}/dld.sh" << 'EOF'
+#!/bin/bash
+
+set -eux
+
+BASE_FOLDER=`dirname $BASH_SOURCE`
+
+if [[ $1 == *github.com*clickhouse-common-static*tgz ]]; then
+    OUT_FILE=${BASE_FOLDER}/"clickhouse-$(echo $1 | sed -r -e 's!^.*/download/v([a-z0-9.-]+)/.*!\1!')"
+    wget "$1" -O ${OUT_FILE}.tgz
+    tar xfv ${OUT_FILE}.tgz
+    # mv ${OUT_FILE}/usr/bin/clickhouse ${BASE_FOLDER}/clickhouse-$(echo ${OUT_FILE} | sed -r -e 's!.*clickhouse-(.+)!\1!')
+    rm ${OUT_FILE}.tgz
+else
+    OUT_FILE=${BASE_FOLDER}/"clickhouse-$(echo $1 | sed -r -e 's!^.*/([0-9]+)/.*/clang-1[0-9]_([a-z_]+)_bundled.*!\1-\2!')"
+    if [ ! -f ${OUT_FILE} ]; then
+        wget "$1" -O ${OUT_FILE}
+        chmod +x ${OUT_FILE}
+    fi;
+fi
+
+rm -f ./clickhouse
+ln -sf ${OUT_FILE} ./clickhouse
+
+EOF
+
+    if [[ ${1:-} == "rm" ]]; then
+        ssh -tt $DEVSERV "rm -rf ${DOWNLOAD_DIR}/clickhouse*; rm -rf ~/_tmp/_ch_data" 
+    else
+        ssh -tt $DEVSERV "cd ${DOWNLOAD_DIR} && ./dld.sh $1 && mkdir -p _ch_data && cd _ch_data && ../clickhouse server" 
+    fi
+}
+
+sub_test(){
+    sub_ping
+    ${LOCAL_PROJECT_ROOT}/tests/clickhouse-test $@
+}
+
+subcommand=${1:-""}
+
+if ! [[ $subcommand =~ ^[a-z_]*$ ]]; then
+    echo "Wrong command. See ${COMMAND_NAME} help"
+    exit 1
+fi
+
+case $subcommand in
+    "")
+        sub_help;
+        ;;
+    *)
+        # check if command exists
+        type sub_${subcommand} &> /dev/null || {
+            echo "Error: Unknown subcommand '$subcommand'" >&2
+            sub_help
+            exit 1
+        }
+        shift
+        sub_${subcommand} $@;
+        ;;
+esac

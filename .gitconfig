@@ -21,9 +21,9 @@
 [core]
 	autocrlf = input
 [user]
-	email = vdimir@yandex-team.ru
+	email = vdimir@clickhouse.com
 	name = vdimir
-	signingkey = 4DAF2EAE0F5BE1557D5A0F3DF57B3E10A21DBB31
+	signingkey = 60A6DF2F983FCD4667C41A1C9B404D301C0CC7EB
 [gpg]
 	program = gpg
 [commit]

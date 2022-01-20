@@ -90,7 +90,6 @@
     "files.autoSave": "onFocusChange",
     "editor.wordSeparators": "`~!@#$%^&*()-=+[{]}\\|;:'\",.<>/?",
     "editor.occurrencesHighlight": false,
-    "window.zoomLevel": 0,
     "editor.renderWhitespace": "selection",
     "workbench.sideBar.location": "left",
     "git.ignoreLegacyWarning": true,
@@ -99,7 +98,6 @@
     "git.autorefresh": true,
     "git.detectSubmodules": false,
     "editor.minimap.enabled": false,
-    "workbench.colorTheme": "Base16 Grayscale Light",
     "rust-client.disableRustup": true,
     "search.searchOnType": false,
     "go.useLanguageServer": true,
@@ -154,5 +152,11 @@
         "Git Bash": {
             "source": "Git Bash"
         }
-    }
+    },
+    "go.toolsManagement.autoUpdate": true,
+    "clock.dateFormat": "ddd, dS mmm | HH:MM",
+    "gitlens.currentLine.enabled": false,
+    "gitlens.statusBar.command": "gitlens.toggleFileBlame",
+    "sortLines.filterBlankLines": true,
+    "workbench.colorTheme": "Base16 Grayscale Light"
 }

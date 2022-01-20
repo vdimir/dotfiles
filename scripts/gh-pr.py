@@ -3,13 +3,36 @@
 
 import os
 import json
+from datetime import datetime
+import humanize
 
-cmd = """
-gh -R ClickHouse/ClickHouse pr list -S "assignee:vdimir is:closed updated:>=`date -v-1d -v-2w +%Y-%m-%d` -label:pr-backport -label:pr-cherrypick" --json state,title,url,mergedAt
-"""
 
-stream = os.popen(cmd)
-output = stream.read()
-prlist = json.loads(output)
+def refmttime(s):
+    if s is None:
+        return None
+    ts = datetime.strptime(s, '%Y-%m-%dT%H:%M:%SZ')
+    return datetime.strftime(ts, '%d %b, %a')
 
-print(prlist)
+def main():
+    cmd = '''
+    gh -R ClickHouse/ClickHouse pr list -S "assignee:@me is:closed updated:>=`date -v-1d -v-1w +%Y-%m-%d` -label:pr-backport -label:pr-cherrypick" --json labels,author,state,title,url,mergedAt,updatedAt
+    '''
+
+    stream = os.popen(cmd)
+    output = stream.read()
+    prlist = json.loads(output)
+
+    prlist.sort(key=lambda e: e['updatedAt'] or '')
+
+    for e in prlist:
+        e['mergedAt'] = refmttime(e['mergedAt'])
+        e['updatedAt'] = refmttime(e['updatedAt'])
+        if e['updatedAt'] == e['mergedAt']:
+            del e['updatedAt']
+        e['author'] = e['author']['login']
+        e['labels'] = ','.join(sorted({lb['name'] for lb in e['labels']}))
+
+    print(json.dumps(prlist))
+
+if __name__ == '__main__':
+    main()

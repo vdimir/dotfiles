@@ -76,6 +76,7 @@ alias grep='egrep --color=auto'
 alias fgrep='fgrep --color=auto'
 alias egrep='egrep --color=auto'
 
+alias sshh='ssh -o "StrictHostKeyChecking no"'
 alias mv='nocorrect mv'
 alias cp='nocorrect cp'
 alias mkdir='nocorrect mkdir'
@@ -149,6 +150,12 @@ stty -ixon
 # autoload -U +X compinit && compinit
 # autoload -U +X bashcompinit && bashcompinit
 
+# The next line updates PATH for Yandex Cloud CLI.
+if [ -f '/Users/vdimir/yandex-cloud/path.bash.inc' ]; then source '/Users/vdimir/yandex-cloud/path.bash.inc'; fi
+
+# The next line enables shell command completion for yc.
+# if [ -f '/Users/vdimir/yandex-cloud/completion.zsh.inc' ]; then source '/Users/vdimir/yandex-cloud/completion.zsh.inc'; fi
+
 # zprof
 
-
+export TERM=xterm-256color

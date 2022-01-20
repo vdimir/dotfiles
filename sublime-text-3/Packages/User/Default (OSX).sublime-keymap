@@ -12,4 +12,5 @@
             { "key": "selection_empty", "operator": "equal", "operand": false}
         ]
     },
+    { "keys": ["f5"], "command": "insert_datetime"}
 ]

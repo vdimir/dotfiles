@@ -23,7 +23,7 @@
 [user]
 	email = vdimir@clickhouse.com
 	name = vdimir
-	signingkey = 60A6DF2F983FCD4667C41A1C9B404D301C0CC7EB
+	signingkey = B762CDA71370F2A61ED91E976EE4CE2BEDC51862
 [gpg]
 	program = gpg
 [commit]

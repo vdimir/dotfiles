@@ -9,7 +9,8 @@ fpath=(~/.zsh ~/.zfunc $fpath)
 fpath=(/usr/local/share/zsh/site-functions $fpath)
 
 
-source /usr/share/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh>/dev/null 2>&1 || source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh>/dev/null 2>&1 || source /usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh>/dev/null 2>&1
+source /usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh>/dev/null 2>&1
+source ~/.zsh/zsh-autosuggestions/zsh-autosuggestions.zsh>/dev/null 2>&1
 source ~/.zsh/zprofile.sh>/dev/null 2>&1
 source ~/.zsh/zprofile.`uname`.sh>/dev/null 2>&1
 source ~/.profile>/dev/null 2>&1
@@ -44,7 +45,7 @@ periodic() {
     GITBR=$(git branch --show-current 2>/dev/null | sed -E 's/^(.{10}).+$/\1.../')
     # GITBR=$(git branch --show-current 2>/dev/null | cut -c 1-10)
     [ ! -z $GITBR ] && GITBR=" [$GITBR]"
-    print -Pn "\033]0;`basename $PWD`$GITBR\007"
+    # print -Pn "\033]0;`basename $PWD`$GITBR\007"
     vcs_info
     rehash
 }
@@ -75,6 +76,7 @@ alias vdir='vdir --color=auto'
 alias grep='egrep --color=auto'
 alias fgrep='fgrep --color=auto'
 alias egrep='egrep --color=auto'
+alias ls='ls --color=auto'
 
 alias sshh='ssh -o "StrictHostKeyChecking no"'
 alias mv='nocorrect mv'
@@ -104,7 +106,6 @@ alias cdp='popd'
 alias gis='git status'
 
 alias br='printf "=%.0s" {1..$(tput cols)}; echo'
-
 
 bindkey "\e\e[D" backward-word
 bindkey "\e\e[C" forward-word
@@ -147,14 +148,8 @@ export LANG=en_US.UTF-8
 
 stty -ixon
 
-# autoload -U +X compinit && compinit
-# autoload -U +X bashcompinit && bashcompinit
-
-# The next line updates PATH for Yandex Cloud CLI.
-if [ -f '/Users/vdimir/yandex-cloud/path.bash.inc' ]; then source '/Users/vdimir/yandex-cloud/path.bash.inc'; fi
-
-# The next line enables shell command completion for yc.
-# if [ -f '/Users/vdimir/yandex-cloud/completion.zsh.inc' ]; then source '/Users/vdimir/yandex-cloud/completion.zsh.inc'; fi
+autoload -U +X compinit && compinit
+autoload -U +X bashcompinit && bashcompinit
 
 # zprof
 

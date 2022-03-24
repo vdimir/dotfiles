@@ -15,7 +15,7 @@ def refmttime(s):
 
 def main():
     cmd = '''
-    gh -R ClickHouse/ClickHouse pr list -S "assignee:@me is:closed updated:>=`date -v-1d -v-1w +%Y-%m-%d` -label:pr-backport -label:pr-cherrypick" --json labels,author,state,title,url,mergedAt,updatedAt
+    gh -R ClickHouse/ClickHouse pr list -S "assignee:@me is:closed updated:>=`date -v-1d -v-1w +%Y-%m-%d` -label:pr-backport -label:pr-cherrypick" --json labels,author,state,title,url,mergedAt,updatedAt,createdAt
     '''
 
     stream = os.popen(cmd)
@@ -27,6 +27,7 @@ def main():
     for e in prlist:
         e['mergedAt'] = refmttime(e['mergedAt'])
         e['updatedAt'] = refmttime(e['updatedAt'])
+        e['createdAt'] = refmttime(e['createdAt'])
         if e['updatedAt'] == e['mergedAt']:
             del e['updatedAt']
         e['author'] = e['author']['login']

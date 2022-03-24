@@ -43,7 +43,8 @@ findroot () {
         cd ..
     done
     echo "$ENVFILENAME not found!" >&2
-    exit 1
+    LOCAL_PROJECT_ROOT=""
+    # exit 1
 }
 
 findroot
@@ -52,7 +53,7 @@ PROJECT_SUFFIX=${PROJECT_SUFFIX:-"$(echo ${LOCAL_PROJECT_ROOT} | grep -oE "Click
 BUILD_TYPE=${BUILD_TYPE:-debug}
 REMOTE_BUILD_ROOT=${REMOTE_BUILD_ROOT:-"~/build${PROJECT_SUFFIX}"}
 REMOTE_DATA_ROOT=${REMOTE_DATA_ROOT:-${REMOTE_BUILD_ROOT}/_data}
-REMOTE_SOURCE_ROOT=${REMOTE_SOURCE_ROOT:-"~/sources/ClickHouse${PROJECT_SUFFIX}"}
+REMOTE_SOURCE_ROOT=${REMOTE_SOURCE_ROOT:-"~/ClickHouse${PROJECT_SUFFIX}"}
 REMOTE_LOG_FOLDER=${REMOTE_LOG_FOLDER:-"~/logs"}
 
 COMMAND_NAME=$(basename $0)
@@ -91,10 +92,10 @@ list_commands(){
 sub_help(){
     echo "Usage: ${COMMAND_NAME} <subcommand> [options]"
     echo "Subcommands:"
-    list_commands | sed "s/'//g" | sed "s/:/ -- /g" 
+    list_commands | sed "s/'//g" | sed "s/:/ -- /g"
     echo ""
 }
-  
+
 sub_info(){
     echo "PROJECT_SUFFIX=${PROJECT_SUFFIX}"
     echo "DEVSERV=${DEVSERV}"
@@ -231,8 +232,6 @@ sub_cmake(){
         -DCMAKE_C_COMPILER=\`which clang-${CLANG_VERSION}\` \
         -DCMAKE_CXX_COMPILER=\`which clang++-${CLANG_VERSION}\` \
         ${ARGS}"
-
-    sub_build
 }
 
 sub_build(){
@@ -302,7 +301,7 @@ sub_rrun(){
 }
 
 sub_ping(){
-    while ! clickhouse-client $@ --query "SELECT 1 FORMAT Null" &>/dev/null; do 
+    while ! clickhouse-client $@ --query "SELECT 1 FORMAT Null" &>/dev/null; do
         sleep 0.5
         echo -n '.'  >&2
     done
@@ -372,7 +371,7 @@ ssh_add_github(){
 
 sub_git_status(){
     ssh_add_github
-    ssh -tt $DEVSERV "git -C ${REMOTE_SOURCE_ROOT} log  --abbrev-commit --format='%h (%ar) "%s" %d' -1; git -C ${REMOTE_SOURCE_ROOT} status" 
+    ssh -tt $DEVSERV "git -C ${REMOTE_SOURCE_ROOT} log  --abbrev-commit --format='%h (%ar) "%s" %d' -1; git -C ${REMOTE_SOURCE_ROOT} status"
 }
 
 sub_git_update(){
@@ -390,12 +389,12 @@ exit
 EOF
 
     if [[ ${1:-} == "" ]]; then
-        ssh -tt $DEVSERV "git -C ${REMOTE_SOURCE_ROOT} checkout master" 
+        ssh -tt $DEVSERV "git -C ${REMOTE_SOURCE_ROOT} checkout master"
     else
-        ssh -tt $DEVSERV "cd ${REMOTE_SOURCE_ROOT} && gh pr checkout ${1} -R ClickHouse/ClickHouse --force" 
+        ssh -tt $DEVSERV "cd ${REMOTE_SOURCE_ROOT} && gh pr checkout ${1} -R ClickHouse/ClickHouse --force"
     fi
 
-    ssh -tt $DEVSERV "git -C ${REMOTE_SOURCE_ROOT} pull && git -C ${REMOTE_SOURCE_ROOT} sup" 
+    ssh -tt $DEVSERV "git -C ${REMOTE_SOURCE_ROOT} pull && git -C ${REMOTE_SOURCE_ROOT} sup"
     echo "----------------------"
     sub_git_status
 }
@@ -445,9 +444,9 @@ ln -sf ${OUT_FILE} ./clickhouse
 EOF
 
     if [[ ${1:-} == "rm" ]]; then
-        ssh -tt $DEVSERV "rm -rf ${DOWNLOAD_DIR}/clickhouse*; rm -rf ~/_tmp/_ch_data" 
+        ssh -tt $DEVSERV "rm -rf ${DOWNLOAD_DIR}/clickhouse*; rm -rf ~/_tmp/_ch_data"
     else
-        ssh -tt $DEVSERV "cd ${DOWNLOAD_DIR} && ./dld.sh $1 && mkdir -p _ch_data && cd _ch_data && ../clickhouse server" 
+        ssh -tt $DEVSERV "cd ${DOWNLOAD_DIR} && ./dld.sh $1 && mkdir -p _ch_data && cd _ch_data && ../clickhouse server"
     fi
 }
 

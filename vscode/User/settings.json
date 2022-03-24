@@ -76,12 +76,14 @@
             "editor.selectionHighlightBorder": "#ababab55",
             "editor.findMatchHighlightBackground": "#FFEEAAAA",
             "editor.findMatchBackground": "#FFDDAA",
+            "diffEditor.removedTextBackground": "#f1e6e6",
+            "diffEditor.insertedTextBackground": "#c4d1c323"
         },
         "[Base16 Grayscale Dark]": {
             "editor.background": "#1e1e1e",
             "editorCursor.foreground": "#d4d4d4",
             "editor.foreground": "#d4d4d4",
-        }
+        },
     },
     "editor.rulers": [140],
     "editor.fontFamily": "'JetBrains Mono'",
@@ -91,7 +93,6 @@
     "editor.wordSeparators": "`~!@#$%^&*()-=+[{]}\\|;:'\",.<>/?",
     "editor.occurrencesHighlight": false,
     "editor.renderWhitespace": "selection",
-    "workbench.sideBar.location": "left",
     "git.ignoreLegacyWarning": true,
     "window.restoreWindows": "none",
     "editor.codeLens": false,
@@ -113,17 +114,15 @@
     "editor.minimap.showSlider": "always",
     "editor.fontSize": 13,
     "files.insertFinalNewline": true,
-    "clangd.path": "/Users/vdimir/Library/Application Support/Code/User/globalStorage/llvm-vs-code-extensions.vscode-clangd/install/12.0.1/clangd_12.0.1/bin/clangd",
     "githubPullRequests.fileListLayout": "tree",
     "remoteHub.search.download.enabled": true,
     "editor.trimAutoWhitespace": true,
     "files.trimTrailingWhitespace": true,
-    "python.defaultInterpreterPath": "/Users/vdimir/.venvs/venv3/bin/python",
+    "python.defaultInterpreterPath": "/usr/bin/python",
     "[plaintext]": {
         "editor.trimAutoWhitespace": false,
         "files.trimTrailingWhitespace": false
     },
-    "terminal.integrated.shell.osx": "/bin/zsh",
     "gitlens.hovers.currentLine.over": "line",
     "gitlens.advanced.telemetry.enabled": false,
     "gitlens.blame.avatars": false,
@@ -135,28 +134,24 @@
     "search.exclude": {
         "contrib/": true
     },
-    "terminal.integrated.profiles.windows": {
-
-        "PowerShell": {
-            "source": "PowerShell",
-            "icon": "terminal-powershell"
-        },
-        "Command Prompt": {
-            "path": [
-                "${env:windir}\\Sysnative\\cmd.exe",
-                "${env:windir}\\System32\\cmd.exe"
-            ],
-            "args": [],
-            "icon": "terminal-cmd"
-        },
-        "Git Bash": {
-            "source": "Git Bash"
-        }
-    },
     "go.toolsManagement.autoUpdate": true,
     "clock.dateFormat": "ddd, dS mmm | HH:MM",
     "gitlens.currentLine.enabled": false,
     "gitlens.statusBar.command": "gitlens.toggleFileBlame",
     "sortLines.filterBlankLines": true,
-    "workbench.colorTheme": "Base16 Grayscale Light"
+    "workbench.colorTheme": "Default Light+",
+    "[cpp]": {
+        "editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd"
+    },
+    "clangd.path": "/opt/homebrew/opt/llvm/bin/clangd",
+    "cmake.additionalKits": [
+        "/opt/homebrew/opt/llvm/bin/",
+        "/opt/homebrew/opt/llvm/bin/clang"
+    ],
+    "editor.unicodeHighlight.allowedLocales": {
+        "ru": true
+    },
+    "editor.unicodeHighlight.nonBasicASCII": false,
+    "security.workspace.trust.banner": "always",
+    "security.workspace.trust.enabled": false
 }

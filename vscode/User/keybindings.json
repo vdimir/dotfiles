@@ -198,5 +198,16 @@
     {
         "key": "shift+cmd+d",
         "command": "gitlens.diffWithRevisionFrom"
+    },
+    {
+        "key": "cmd+h cmd+f",
+        "command": "editor.action.formatSelection",
+        "when": "editorHasDocumentSelectionFormattingProvider && editorTextFocus && !editorReadonly && editorHasSelection"
+    },
+    {
+        "key": "cmd+h cmd+f",
+        "command": "editor.action.formatChanges",
+        "when": "editorHasDocumentSelectionFormattingProvider && editorTextFocus && !editorReadonly && !editorHasSelection"
+
     }
 ]

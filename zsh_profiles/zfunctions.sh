@@ -1,6 +1,6 @@
 
 function b () {
-    echo "scale=3; $@" | bc 
+    echo "scale=3; $@" | bc
 }
 alias b='noglob b'
 
@@ -10,7 +10,7 @@ function venv () {
       cd "$1"
   fi
   ACTIVATEPATH="/bin/activate"
-  VENVDIRS=("$@" "venv" ".env" "venv2")
+  VENVDIRS=("$@" "venv" ".venv" ".env")
   while [[ `pwd` != "/" ]]; do
     for DIR in $VENVDIRS; do
       FILE=$DIR$ACTIVATEPATH
@@ -44,5 +44,7 @@ function while_proc_exists () {
 
 
 function mkcd (){ mkdir -p -- "$1" && cd -P -- "$1"}
+
+function termnotify (){ printf "\x1b]99;;${1:-ping}\x1b\\" }
 
 

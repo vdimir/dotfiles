@@ -47,4 +47,5 @@ function mkcd (){ mkdir -p -- "$1" && cd -P -- "$1"}
 
 function termnotify (){ printf "\x1b]99;;${1:-ping}\x1b\\" }
 
+alias git-up-master='git branch --show-current | grep -q master && (git pull upstream master --ff-only && git push origin) || echo "Not on master branch"'
 

@@ -5,7 +5,7 @@
     {
         "bg0": "hsl(180, 7%, 97%)",
         "bg1": "hsl(204, 10%, 90%)",
-        "fg1": "#303030",
+        "fg1": "#404040",
         "fg2": "#404060",
         "fg3": "hsl(0, 0%, 20%)",
         "fg4": "#406060",
@@ -201,7 +201,7 @@
         {
             "name": "markup links",
             "scope": "string.other.link, markup.underline.link",
-            "foreground": "var(fg1)"
+            "foreground": "color(var(fg5) alpha(0.8))"
         },
         {
             "name": "markup bold",

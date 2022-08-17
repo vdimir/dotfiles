@@ -1,6 +1,6 @@
 {
 	"always_show_minimap_viewport": true,
-	"color_scheme": "Packages/Color Scheme - MyOwn/myown-light.sublime-color-scheme",
+	"color_scheme": "auto",
 	"draw_white_space": "selection",
 	"file_exclude_patterns":
 	[
@@ -53,4 +53,6 @@
 	"caret_extra_top": 1,
 	"caret_extra_bottom": 1,
 	"caret_extra_width": 1,
+	"dark_color_scheme": "myown-dark.sublime-color-scheme",
+	"light_color_scheme": "myown-light.sublime-color-scheme",
 }

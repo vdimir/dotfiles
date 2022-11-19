@@ -326,5 +326,24 @@
         "key": "ctrl+f5",
         "command": "-workbench.action.debug.run",
         "when": "debuggersAvailable && debugState != 'initializing'"
+    },
+    {
+        "key": "alt+b",
+        "command": "workbench.action.editor.nextChange",
+        "when": "editorTextFocus && !textCompareEditorActive"
+    },
+    {
+        "key": "alt+f5",
+        "command": "-workbench.action.editor.nextChange",
+        "when": "editorTextFocus && !textCompareEditorActive"
+    },
+    {
+        "key": "shift+cmd+u",
+        "command": "-workbench.action.output.toggleOutput",
+        "when": "workbench.panel.output.active"
+    },
+    {
+        "key": "shift+cmd+u",
+        "command": "editor.action.transformToUppercase"
     }
 ]

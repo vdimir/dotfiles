@@ -69,7 +69,7 @@
             "editorCursor.foreground": "#404040",
             "editor.foreground": "#404040",
             "editor.wordHighlightBorder": "#303030",
-            // "editor.selectionHighlightBackground": "#f0f0f0",
+            "editor.selectionHighlightBackground": "#f0f0f0",
             "editor.selectionHighlightBorder": "#ababab55",
             "editor.findMatchHighlightBackground": "#FFEEAAAA",
             "editor.findMatchBackground": "#FFDDAA",
@@ -96,9 +96,7 @@
     "git.detectSubmodules": false,
     "search.searchOnType": false,
     "go.useLanguageServer": true,
-    "workbench.startupEditor": "welcomePageInEmptyWorkbench",
     "cmake.configureOnOpen": true,
-    "github.gitAuthentication": false,
     "githubPullRequests.telemetry.enabled": false,
     "editor.minimap.showSlider": "always",
     "files.insertFinalNewline": true,
@@ -117,17 +115,25 @@
     "gitlens.blame.format": "[${author|7}] ${message|5} ${agoOrDate|10-}",
     "C_Cpp.intelliSenseEngine": "Disabled",
     "files.watcherExclude": {
-        "contrib/": true
+        "contrib/": false,
+        "build/": true,
+        "build_/": true,
     },
     "search.exclude": {
-        "contrib/": true
+        "contrib/": false,
+        "build/": true,
+        "build_/": true,
+    },
+    "files.exclude": {
+        "contrib/": false,
+        "build/": true,
+        "build_/": true,
     },
     "go.toolsManagement.autoUpdate": true,
     "clock.dateFormat": " H:MM Z",
     "gitlens.currentLine.enabled": false,
     "gitlens.statusBar.command": "gitlens.toggleFileBlame",
     "sortLines.filterBlankLines": true,
-    "workbench.colorTheme": "Base16 Grayscale Light",
     "[cpp]": {
         "editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd"
     },
@@ -146,7 +152,6 @@
     "openInGitHub.useLocalBranch": false,
     "editor.inlineSuggest.enabled": true,
     "editor.cursorBlinking": "smooth",
-    "editor.fontSize": 13,
     "editor.inlayHints.enabled": "off",
     "github.copilot.enable": {
         "*": true,
@@ -160,7 +165,6 @@
     "clangd.arguments": [
         "--header-insertion=never"
     ],
-    "terminal.integrated.fontSize": 13,
     "terminal.integrated.letterSpacing": 1,
     "terminal.integrated.tabs.enableAnimation": false,
     "terminal.integrated.wordSeparators": " ()[]{}',\"`─‘’~/.-_$!:",
@@ -172,5 +176,39 @@
     },
     "terminal.integrated.cursorWidth": 2,
     "githubPullRequests.pullBranch": "never",
+    "diffEditor.ignoreTrimWhitespace": false,
+    "githubPullRequests.queries": [
+        {
+            "label": "Waiting For My Review",
+            "query": "is:open review-requested:${user}"
+        },
+        {
+            "label": "Assigned To Me",
+            "query": "is:open assignee:${user}"
+        },
+        {
+            "label": "Created By Me",
+            "query": "is:open author:${user}"
+        }
+    ],
+    "window.autoDetectColorScheme": true,
+    "workbench.preferredLightColorTheme": "Base16 Grayscale Light",
+    "workbench.preferredDarkColorTheme": "Base16 Grayscale Light",
+    "workbench.colorTheme": "Base16 Grayscale Light",
+    "workbench.startupEditor": "welcomePageInEmptyWorkbench",
+    "gitlens.plusFeatures.enabled": false,
+    "gitlens.virtualRepositories.enabled": false,
+    "gitlens.codeLens.authors.enabled": false,
+    "gitlens.codeLens.enabled": false,
+    "gitlens.statusBar.format": "${agoOrDate}${' via 'pullRequest}",
+    "github.gitProtocol": "ssh",
+    "remote.SSH.useLocalServer": false,
+    "remote.SSH.remotePlatform": {
+        "aws-dev": "linux"
+    },
+    "window.commandCenter": false,
     "terminal.integrated.tabs.enabled": false,
+    "editor.fontSize": 13,
+    "terminal.integrated.fontSize": 13,
+    "window.zoomLevel": 1,
 }

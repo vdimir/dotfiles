@@ -55,4 +55,5 @@
 	"caret_extra_width": 1,
 	"dark_color_scheme": "myown-dark.sublime-color-scheme",
 	"light_color_scheme": "myown-light.sublime-color-scheme",
+	"theme": "auto",
 }

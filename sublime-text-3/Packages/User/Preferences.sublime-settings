@@ -21,11 +21,11 @@
 		"__pycache__",
 		".ipynb_checkpoints"
 	],
-	"font_face": "DejaVu Sans Mono",
+	"font_face": "JetBrains Mono",
 	"font_options":
 	[
 	],
-	"font_size": 13,
+	"font_size": 14,
 	"highlight_line": true,
 	"hot_exit": true,
 	"ignored_packages":

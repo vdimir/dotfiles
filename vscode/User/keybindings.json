@@ -178,7 +178,7 @@
         "command": "-workbench.action.gotoSymbol"
     },
     {
-        "key": "shift+cmd+o",
+        "key": "cmd+o",
         "command": "workbench.action.quickOpen"
     },
     {
@@ -206,7 +206,7 @@
 
     },
     {
-        "key": "shift+alt+n",
+        "key": "cmd+e cmd+e",
         "command": "workbench.action.compareEditor.nextChange",
         "when": "textCompareEditorVisible"
     },
@@ -216,7 +216,7 @@
         "when": "textCompareEditorVisible"
     },
     {
-        "key": "shift+alt+b",
+        "key": "cmd+e cmd+w",
         "command": "workbench.action.compareEditor.previousChange",
         "when": "textCompareEditorVisible"
     },
@@ -236,16 +236,6 @@
         "when": "editorTextFocus && !textCompareEditorActive"
     },
     {
-        "key": "shift+space",
-        "command": "editor.action.triggerSuggest",
-        "when": "editorHasCompletionItemProvider && textInputFocus && !editorReadonly"
-    },
-    {
-        "key": "ctrl+space",
-        "command": "-editor.action.triggerSuggest",
-        "when": "editorHasCompletionItemProvider && textInputFocus && !editorReadonly"
-    },
-    {
         "key": "cmd+j",
         "command": "-workbench.action.togglePanel"
     },
@@ -256,7 +246,7 @@
     {
         "key": "cmd+a n",
         "command": "workbench.action.terminal.focusNext",
-        "when": "terminalFocus && terminalHasBeenCreated && !terminalEditorFocus || terminalFocus && terminalProcessSupported && !terminalEditorFocus"
+        "when": "terminalFocus"
     },
     {
         "key": "shift+cmd+]",
@@ -328,7 +318,7 @@
         "when": "debuggersAvailable && debugState != 'initializing'"
     },
     {
-        "key": "alt+b",
+        "key": "cmd+e cmd+e",
         "command": "workbench.action.editor.nextChange",
         "when": "editorTextFocus && !textCompareEditorActive"
     },
@@ -345,5 +335,172 @@
     {
         "key": "shift+cmd+u",
         "command": "editor.action.transformToUppercase"
+    },
+    {
+        "key": "cmd+'",
+        "command": "editor.action.triggerSuggest",
+        "when": "editorHasCompletionItemProvider && textInputFocus && !editorReadonly"
+    },
+    {
+        "key": "ctrl+shift+up",
+        "command": "workbench.action.increaseViewSize"
+    },
+    {
+        "key": "ctrl+shift+down",
+        "command": "workbench.action.decreaseViewSize"
+    },
+    {
+        "key": "ctrl+cmd+right",
+        "command": "-workbench.action.moveEditorToNextGroup"
+    },
+    {
+        "key": "shift+cmd+'",
+        "command": "workbench.action.quickOpenPreviousRecentlyUsedEditorInGroup",
+        "when": "!activeEditorGroupEmpty"
+    },
+    {
+        "key": "ctrl+tab",
+        "command": "-workbench.action.quickOpenPreviousRecentlyUsedEditorInGroup",
+        "when": "!activeEditorGroupEmpty"
+    },
+    {
+        "key": "shift+cmd+'",
+        "command": "workbench.action.quickOpenNavigateNextInEditorPicker",
+        "when": "inEditorsPicker && inQuickOpen"
+    },
+    {
+        "key": "ctrl+tab",
+        "command": "-workbench.action.quickOpenNavigateNextInEditorPicker",
+        "when": "inEditorsPicker && inQuickOpen"
+    },
+    {
+        "key": "shift+cmd+;",
+        "command": "workbench.action.quickOpenNavigatePrevious",
+        "when": "inEditorsPicker && inQuickOpen"
+    },
+    {
+        "key": "cmd+k",
+        "command": "workbench.action.terminal.toggleTerminal",
+        "when": "terminal.active"
+    },
+    {
+        "key": "ctrl+`",
+        "command": "-workbench.action.terminal.toggleTerminal",
+        "when": "terminal.active"
+    },
+    {
+        "key": "shift+cmd+m",
+        "command": "workbench.action.terminal.moveToEditor",
+        "when": "panelFocus && terminalFocus"
+    },
+    {
+        "key": "shift+cmd+m",
+        "command": "workbench.action.terminal.moveToTerminalPanel",
+        "when": "!panelFocus && terminalFocus"
+    },
+    {
+        "key": "cmd+j",
+        "command": "workbench.action.focusFirstEditorGroup",
+        "when": "terminalFocus"
+    },
+    {
+        "key": "cmd+e cmd+r",
+        "command": "git.revertSelectedRanges",
+        "when": "isInDiffEditor"
+    },
+    {
+        "key": "cmd+k cmd+r",
+        "command": "-git.revertSelectedRanges",
+        "when": "isInDiffEditor"
+    },
+    {
+        "key": "cmd+e cmd+s",
+        "command": "git.stageSelectedRanges",
+        "when": "isInDiffEditor"
+    },
+    {
+        "key": "cmd+k alt+cmd+s",
+        "command": "-git.stageSelectedRanges",
+        "when": "isInDiffEditor"
+    },
+    {
+        "key": "cmd+r",
+        "command": "workbench.action.tasks.runTask"
+    },
+    {
+        "key": "ctrl+down",
+        "command": "cursorMove",
+        "args": {
+          "by": "line",
+          "to": "down",
+          "revealCursor": true,
+          "value": 5,
+        },
+        "when": "editorFocus"
+      },
+      {
+        "key": "ctrl+up",
+        "command": "cursorMove",
+        "args": {
+          "by": "line",
+          "to": "up",
+          "revealCursor": true,
+          "value": 5,
+        },
+        "when": "editorFocus"
+    },
+    {
+        "key": "shift+cmd+o",
+        "command": "workbench.action.files.openFile",
+        "when": "false"
+    },
+    {
+        "key": "cmd+o",
+        "command": "-workbench.action.files.openFile",
+        "when": "false"
+    },
+    {
+        "key": "shift+cmd+o",
+        "command": "workbench.action.files.openFileFolder",
+        "when": "isMacNative && openFolderWorkspaceSupport"
+    },
+    {
+        "key": "cmd+o",
+        "command": "-workbench.action.files.openFileFolder",
+        "when": "isMacNative && openFolderWorkspaceSupport"
+    },
+    {
+        "key": "shift+cmd+o",
+        "command": "workbench.action.files.openFolderViaWorkspace",
+        "when": "!openFolderWorkspaceSupport && workbenchState == 'workspace'"
+    },
+    {
+        "key": "cmd+o",
+        "command": "-workbench.action.files.openFolderViaWorkspace",
+        "when": "!openFolderWorkspaceSupport && workbenchState == 'workspace'"
+    },
+    {
+        "key": "shift+cmd+o",
+        "command": "workbench.action.files.openLocalFileFolder",
+        "when": "remoteFileDialogVisible"
+    },
+    {
+        "key": "cmd+o",
+        "command": "-workbench.action.files.openLocalFileFolder",
+        "when": "remoteFileDialogVisible"
+    },
+    {
+        "key": "cmd+; cmd+s",
+        "command": "editor.action.insertSnippet"
+    },
+    {
+        "key": "cmd+; cmd+[",
+        "command": "editor.action.jumpToBracket",
+        "when": "editorTextFocus"
+    },
+    {
+        "key": "shift+cmd+\\",
+        "command": "-editor.action.jumpToBracket",
+        "when": "editorTextFocus"
     }
 ]

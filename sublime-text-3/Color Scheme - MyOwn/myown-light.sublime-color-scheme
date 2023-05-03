@@ -199,11 +199,6 @@
             "foreground": "var(fg1)"
         },
         {
-            "name": "markup links",
-            "scope": "string.other.link, markup.underline.link",
-            "foreground": "color(var(fg5) alpha(0.8))"
-        },
-        {
             "name": "markup bold",
             "scope": "markup.bold",
             "font_style": "bold"

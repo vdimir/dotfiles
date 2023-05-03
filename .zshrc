@@ -13,6 +13,7 @@ source /usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh>/dev/null 
 source ~/.zsh/zsh-autosuggestions/zsh-autosuggestions.zsh>/dev/null 2>&1
 source ~/.zsh/zprofile.sh>/dev/null 2>&1
 source ~/.zsh/zprofile.`uname`.sh>/dev/null 2>&1
+source ~/.zsh/zprofile.local.sh>/dev/null 2>&1
 source ~/.profile>/dev/null 2>&1
 source ~/.zsh/zfunctions.sh>/dev/null 2>&1
 
@@ -73,7 +74,7 @@ fi
 
 alias dir='dir --color=auto'
 alias vdir='vdir --color=auto'
-alias grep='egrep --color=auto'
+alias grep='egrep --color=auto --text'
 alias fgrep='fgrep --color=auto'
 alias egrep='egrep --color=auto'
 alias ls='ls --color=auto'
@@ -83,6 +84,7 @@ alias mv='nocorrect mv'
 alias cp='nocorrect cp'
 alias mkdir='nocorrect mkdir'
 alias sudo='nocorrect sudo'
+alias curl='noglob curl'
 
 alias ll='ls -lh'
 alias la='ls -a'

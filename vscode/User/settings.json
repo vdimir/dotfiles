@@ -7,12 +7,23 @@
                 "fontStyle": "",
                 "foreground": "#606070"
             },
-            "functions": "#404060",
-            "variables": "#404060",
-            "keywords": "#404040",
-            "types": "#303030",
-            "strings": "#303050",
+            "functions": "#202030",
+            "variables": "#202030",
+            "keywords": "#555560",
+            "types": "#555560",
+            "strings": {
+                "foreground": "#606070"
+            },
+            "numbers": "#606070",
             "textMateRules": [
+                {
+                    "scope":"keyword",
+                    "settings": { "foreground": "#555560" }
+                },
+                {
+                    "scope": "meta.block",
+                    "settings": { "foreground": "#202030" }
+                },
                 {
                     "scope": "entity.name.import.go",
                     "settings": { "fontStyle": "" }
@@ -27,7 +38,7 @@
                 },
                 {
                     "scope": ["entity.name.type.class", "entity.name.function", "entity.name"],
-                    "settings": { "foreground": "#202020" }
+                    "settings": { "foreground": "#202030" }
                 },
             ]
         },
@@ -72,9 +83,13 @@
             "editor.selectionHighlightBackground": "#f0f0f0",
             "editor.selectionHighlightBorder": "#ababab55",
             "editor.findMatchHighlightBackground": "#FFEEAAAA",
-            "editor.findMatchBackground": "#FFDDAA",
+            "editor.findMatchBackground": "#ffddaa55",
             "diffEditor.removedTextBackground": "#f1e6e6",
-            "diffEditor.insertedTextBackground": "#c4d1c323"
+            "diffEditor.insertedTextBackground": "#c4d1c300",
+            "diffEditor.insertedLineBackground": "#c4d1c343",
+            "editorBracketHighlight.foreground1": "#202030",
+            "editorBracketHighlight.foreground2": "#5d5dd8",
+            "editorBracketHighlight.foreground3": "#202030",
         },
         "[Base16 Grayscale Dark]": {
             "editor.background": "#1e1e1e",
@@ -98,7 +113,6 @@
     "go.useLanguageServer": true,
     "cmake.configureOnOpen": true,
     "githubPullRequests.telemetry.enabled": false,
-    "editor.minimap.showSlider": "always",
     "files.insertFinalNewline": true,
     "githubPullRequests.fileListLayout": "tree",
     "remoteHub.search.download.enabled": true,
@@ -115,22 +129,23 @@
     "gitlens.blame.format": "[${author|7}] ${message|5} ${agoOrDate|10-}",
     "C_Cpp.intelliSenseEngine": "Disabled",
     "files.watcherExclude": {
-        "contrib/": false,
-        "build/": true,
+        "_build/": true,
         "build_/": true,
+        "build/": true,
+        "contrib/": true
     },
     "search.exclude": {
-        "contrib/": false,
-        "build/": true,
+        "_build/": true,
         "build_/": true,
+        "build/": true,
+        "contrib/": true,
     },
     "files.exclude": {
-        "contrib/": false,
-        "build/": true,
+        "_build/": true,
         "build_/": true,
+        "build/": true,
+        "contrib/": false
     },
-    "go.toolsManagement.autoUpdate": true,
-    "clock.dateFormat": " H:MM Z",
     "gitlens.currentLine.enabled": false,
     "gitlens.statusBar.command": "gitlens.toggleFileBlame",
     "sortLines.filterBlankLines": true,
@@ -150,7 +165,6 @@
     "security.workspace.trust.enabled": false,
     "openInGitHub.remote.name": "upstream",
     "openInGitHub.useLocalBranch": false,
-    "editor.inlineSuggest.enabled": true,
     "editor.cursorBlinking": "smooth",
     "editor.inlayHints.enabled": "off",
     "github.copilot.enable": {
@@ -160,7 +174,6 @@
         "markdown": true,
         "cpp": true
     },
-    "editor.minimap.enabled": false,
     "terminal.integrated.showExitAlert": false,
     "clangd.arguments": [
         "--header-insertion=never"
@@ -168,15 +181,12 @@
     "terminal.integrated.letterSpacing": 1,
     "terminal.integrated.tabs.enableAnimation": false,
     "terminal.integrated.wordSeparators": " ()[]{}',\"`─‘’~/.-_$!:",
-    "clock.iconName": "",
-    "clock.alignment": "Right",
     "python.formatting.provider": "black",
     "[python]": {
         "editor.defaultFormatter": "ms-python.python"
     },
     "terminal.integrated.cursorWidth": 2,
     "githubPullRequests.pullBranch": "never",
-    "diffEditor.ignoreTrimWhitespace": false,
     "githubPullRequests.queries": [
         {
             "label": "Waiting For My Review",
@@ -204,11 +214,51 @@
     "github.gitProtocol": "ssh",
     "remote.SSH.useLocalServer": false,
     "remote.SSH.remotePlatform": {
-        "aws-dev": "linux"
+        "aws-dev": "linux",
+        "dodev": "linux",
+        "dodev2": "linux"
     },
     "window.commandCenter": false,
-    "terminal.integrated.tabs.enabled": false,
     "editor.fontSize": 13,
     "terminal.integrated.fontSize": 13,
-    "window.zoomLevel": 1,
+    "editor.minimap.showSlider": "always",
+    "terminal.integrated.altClickMovesCursor": false,
+    "terminal.integrated.copyOnSelection": true,
+    "terminal.integrated.macOptionIsMeta": true,
+    "editor.stickyScroll.enabled": true,
+    "yaclock.prefix": "",
+    "yaclock.showDate": true,
+    "yaclock.showDay": true,
+    "diffEditor.ignoreTrimWhitespace": false,
+    "editor.minimap.size": "fill",
+    "editor.minimap.renderCharacters": false,
+    "editor.cursorSurroundingLines": 5,
+    "multiCommand.commands": [
+        {
+            "command": "multiCommand.down3Lines",
+            "sequence": [
+                {
+                    "command": "cursorMove",
+                    "args": { "to": "viewPortBottom", }
+                },
+                {
+                    "command": "cursorMove",
+                    "args": {
+                        "by": "line",
+                        "to": "down",
+                        "revealCursor": true,
+                        "value": 5,
+                    }
+                },
+            ]
+        },
+    ],
+    "editor.suggestOnTriggerCharacters": true,
+    "editor.wordBasedSuggestions": true,
+    "terminal.integrated.gpuAcceleration": "canvas",
+    "editor.inlineSuggest.enabled": true,
+    "editor.suggest.snippetsPreventQuickSuggestions": false,
+    "editor.snippetSuggestions": "top",
+    "terminal.integrated.enableMultiLinePasteWarning": false,
+    "editor.minimap.enabled": false,
 }

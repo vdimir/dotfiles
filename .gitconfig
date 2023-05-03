@@ -2,12 +2,13 @@
     co = checkout
     st = status
     ci = commit -v
-    lg = log --graph --abbrev-commit --decorate --format=format:'%C(bold blue)%h%C(reset) - %C(bold green)(%ar)%C(reset) %C(white)%s%C(reset) %C(dim white)- %C(cyan)%G?%C(dim white) %an%C(reset)%C(bold yellow)%d%C(reset)'
+    lgg = log --graph --abbrev-commit --decorate --format=format:'%C(bold blue)%h%C(reset) - %C(bold green)(%ar)%C(reset) %C(white)%s%C(reset) %C(dim white)- %C(cyan)%G?%C(dim white) %an%C(reset)%C(bold yellow)%d%C(reset)'
+    lg = log --graph --abbrev-commit --decorate --format=format:'%C(bold blue)%h%C(reset) - %C(bold green)(%ar)%C(reset) %C(white)%s%C(reset) %C(dim white)- %C(cyan)%G?%C(dim white) %an%C(reset)%C(bold yellow)%d%C(reset)' --first-parent -10
     br = branch
     au = add -u
     sup = submodule update --init --recursive
-    pushu=!"git push --set-upstream ${1:-origin} HEAD:vdimir/$(git symbolic-ref HEAD | sed -e 's/^refs\\/heads\\///')"
-[puh]
+    puf = push --force-with-lease
+[push]
     default = current
 [pull]
     rebase = true
@@ -19,12 +20,8 @@
     clean = git-lfs clean -- %f
 [fetch]
     prune = true
-[core]
-    autocrlf = input
-[user]
-    email = vdimir@clickhouse.com
-    name = vdimir
-    signingkey = B762CDA71370F2A61ED91E976EE4CE2BEDC51862
+[include]
+    path = ~/.gitconfig.user
 [gpg]
     program = gpg
 [commit]

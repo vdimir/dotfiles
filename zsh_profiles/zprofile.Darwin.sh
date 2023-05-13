@@ -31,4 +31,3 @@ export DEVSERV=aws-dev
 PROMPT_SUPPRESS_HOST=1
 export GPG_TTY=$(tty)
 
-alias subl="vscode -n"

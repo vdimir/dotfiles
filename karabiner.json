@@ -16,6 +16,26 @@
                 },
                 "rules": [
                     {
+                      "description": "cmd-q to cmd-h or hold",
+                        "manipulators": [
+                            {
+                        "type": "basic",
+                        "from": {
+                            "key_code": "q",
+                            "modifiers": {
+                                "mandatory": ["left_command"],
+                                "optional": ["caps_lock"]
+                            }
+                        },
+                        "parameters": {
+                            "basic.to_if_alone_timeout_milliseconds": 500,
+                            "basic.to_if_held_down_threshold_milliseconds": 500
+                        },
+                        "to_if_alone": [ { "key_code": "h", "modifiers": "left_command" } ],
+                        "to_if_held_down": [ { "key_code": "q", "modifiers": "left_command" } ]
+                        }]
+                    },
+                    {
                         "description": "Caps to Esc/Cmd",
                         "manipulators": [
                             {

@@ -1,0 +1,70 @@
+#!/usr/bin/env python3
+
+
+import argparse
+import pyperclip
+import subprocess
+import os
+import hashlib
+import errno
+from pathlib import Path
+
+TEMP_DIR = os.path.expanduser("~/.lgg_tmp")
+LAST_LOG_FILE = os.path.expanduser("~/.lgg_tmp/last.log")
+
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("url", type=str, nargs="?")
+    return parser.parse_args()
+
+
+def force_symlink(file1, file2):
+    try:
+        os.symlink(file1, file2)
+    except OSError as e:
+        if e.errno == errno.EEXIST:
+            os.remove(file2)
+            os.symlink(file1, file2)
+
+
+def main(args):
+    subprocess.run(f"du -sh {TEMP_DIR}", shell=True, check=True)
+
+    url = args.url if args.url else pyperclip.paste()
+    if not args.url and not url.startswith("http"):
+        if not os.path.exists(LAST_LOG_FILE):
+            print("No logs found")
+            return
+        print("No url provided, opening latest log")
+        subprocess.run(f"ls -l {LAST_LOG_FILE}", shell=True, check=True)
+        subprocess.run(f"less {LAST_LOG_FILE}", shell=True, check=True)
+        return
+
+    url_hash = hashlib.sha1(url.encode()).hexdigest()[:16]
+    tmp_file = os.path.join(TEMP_DIR, f"{url_hash}.log")
+    print(f"{url} -> {url_hash}")
+
+    if not os.path.exists(tmp_file):
+        dld_cmd = f'curl -g "{url}"'
+        if url.endswith(".log.gz"):
+            dld_cmd += " | gunzip"
+        elif url.endswith(".log.zst"):
+            dld_cmd += " | zstd -d"
+        elif url.endswith(".log"):
+            pass
+        else:
+            print(f"Wrong url {url}")
+            return
+
+        os.makedirs(TEMP_DIR, exist_ok=True)
+        dld_cmd += f" > {tmp_file}"
+        print(dld_cmd)
+        subprocess.run(dld_cmd, shell=True, check=True)
+
+    force_symlink(tmp_file, LAST_LOG_FILE)
+    subprocess.run(f"less {tmp_file}", shell=True, check=True)
+
+
+if __name__ == "__main__":
+    main(parse_args())

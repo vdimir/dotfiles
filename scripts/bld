@@ -1,0 +1,346 @@
+#!/usr/bin/env python
+
+import argparse
+from collections import defaultdict
+import errno
+import os
+import sys
+import select
+import subprocess
+from functools import partial
+import time
+from typing import Optional
+from pathlib import Path
+import shutil
+
+try:
+    from emoji import emojize
+    def pprint(msg, **kwargs):
+        print(emojize(str(msg)), **kwargs)
+except ImportError:
+    def pprint(msg, **kwargs):
+        print(str(msg), **kwargs)
+
+CLANG_VERSION = int(os.environ.get('BLD_CLANG_VERSION', 16))
+
+BUILD_TARGETS = ["clickhouse-server", "clickhouse-client"]
+
+SYMLINK_PATH = os.path.expanduser("~/clickhouse")
+SERVER_CWD = os.path.expanduser(os.environ.get('BLD_SERVER_CWD', "~/_tmp"))
+BUILD_DIR_PREFIX = os.environ.get('BLD_DIR_PREFIX', '_build/')
+BINARY_RELATIVE_PATH = "programs/clickhouse"
+
+assert(BUILD_DIR_PREFIX.endswith('/'))
+
+def get_build_args(build_type, sanitizer = None, compiler_flags = None, extra_cmake_options = []):
+    cmake_options = [
+        f"-DCMAKE_C_COMPILER=`which clang-{CLANG_VERSION}`",
+        f"-DCMAKE_CXX_COMPILER=`which clang++-{CLANG_VERSION}`",
+        f"-DCMAKE_C_COMPILER_LAUNCHER=ccache",
+        f"-DCMAKE_CXX_COMPILER_LAUNCHER=ccache",
+        f"-DENABLE_CLICKHOUSE_SELF_EXTRACTING=OFF",
+        f"-DCMAKE_BUILD_TYPE={build_type}",
+        f"-DENABLE_BENCHMARKS=ON",
+        f"-DENABLE_TESTS=ON",
+        f"-DENABLE_EXAMPLES=ON",
+        f"-DENABLE_RUST=ON",
+    ]
+
+    if sanitizer is not None:
+        cmake_options.append(f"-DSANITIZE={sanitizer}")
+
+    if compiler_flags is not None:
+        cmake_options.append(f"-DCMAKE_C_FLAGS='{compiler_flags}'")
+        cmake_options.append(f"-DCMAKE_CXX_FLAGS='{compiler_flags}'")
+
+    cmake_options.extend(extra_cmake_options)
+
+    return cmake_options
+
+BUILD_TYPE_ARGS = {
+    "debug":   get_build_args("Debug"),
+    "cov_deb":   get_build_args("Debug", extra_cmake_options=["-DWITH_COVERAGE=1"]),
+    "cov_rel":   get_build_args("RelWithDebInfo", compiler_flags="-fno-omit-frame-pointer -fno-inline", extra_cmake_options=["-DWITH_COVERAGE=1"]),
+    "release": get_build_args("RelWithDebInfo"),
+    "release_noomit": get_build_args("RelWithDebInfo", compiler_flags="-fno-omit-frame-pointer"),
+    "reldeb":  get_build_args("RelWithDebInfo"),
+    "asan":    get_build_args("RelWithDebInfo", sanitizer="address"),
+    "msan":    get_build_args("RelWithDebInfo", sanitizer="memory"),
+    "tsan":    get_build_args("RelWithDebInfo", sanitizer="thread"),
+    "ubsan":   get_build_args("RelWithDebInfo", sanitizer="undefined"),
+}
+
+
+class ToggleAction(argparse.Action):
+    def __init__(self, option_strings, dest, nargs=None, **kwargs):
+        short_opts = [opt for opt in option_strings if len(opt) == 2 and opt.startswith('-')]
+        long_opts = [opt.removeprefix('--') for opt in option_strings if opt.startswith('--')]
+
+        assert(len(short_opts) + len(long_opts) == len(option_strings))
+        opts = short_opts + [f'--{opt}' for opt in long_opts] + [f'--no-{opt}' for opt in long_opts]
+
+        super(ToggleAction, self).__init__(opts, dest, nargs=0, **kwargs)
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        setattr(namespace, self.dest, not option_string.startswith('--no'))
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Build the project")
+    parser.add_argument("path", nargs='*', default=None)
+    parser.add_argument("-n", action="count", default=0)
+    parser.add_argument("--clear", "-c", action="count", default=0)
+    parser.add_argument("--force", "-f", action="store_true")
+    parser.add_argument("--link", action=ToggleAction, default=False)
+    parser.add_argument("--install", action=ToggleAction, default=False)
+    parser.add_argument("--cmake", action=ToggleAction, default=None)
+    parser.add_argument("--run", "-r", action=ToggleAction, default=os.environ.get('BLD_RUN', False))
+    default_bld_type = os.environ.get('BLD_TYPE')
+    parser.add_argument("--build", "-b", nargs='+', default=[default_bld_type] if default_bld_type else [])
+    parser.add_argument("--tmux", action=ToggleAction, default=False)
+    parser.add_argument("--loop", action=ToggleAction, default=False)
+    return parser.parse_args()
+
+def get_build_params(path, build_types):
+    path = Path(path).resolve()
+
+    if not path.is_relative_to(Path.home()):
+        raise Exception("Path must be relative to home dir: {}".format(path))
+
+    if path.match(f'?lick?ouse*/{BUILD_DIR_PREFIX}*') and not build_types:
+        return path.parent.parent, [path.name]
+
+    if path.match('?lick?ouse*'):
+        if build_types:
+            if build_types == ['all']:
+                build_types = [p.name for p in path.glob(f'{BUILD_DIR_PREFIX}*')]
+            return path, build_types
+
+        path_to_check_time = 'programs'
+        all_builds = [p for p in path.glob(f'{BUILD_DIR_PREFIX}*') if Path.exists(p / path_to_check_time)]
+        # all_builds = sorted(all_builds, key=lambda p: Path.stat(p / path_to_check_time).st_ctime, reverse=True)
+        if all_builds:
+            return path, [all_builds[0].name]
+
+    raise Exception("Can't find build in path: '{}'".format(path))
+
+
+def force_symlink(file1, file2):
+    try:
+        os.symlink(file1, file2)
+    except OSError as e:
+        if e.errno == errno.EEXIST:
+            os.remove(file2)
+            os.symlink(file1, file2)
+
+
+def ask_user_to_continue(msg='Continue?'):
+    print(f"{msg} [Y/n/q] ", end='')
+    try:
+        answer = input().strip().lower()
+    except KeyboardInterrupt:
+        answer = 'n'
+        print()
+    if answer == 'q':
+        pprint("\n:stop_sign:Canceled by user")
+        sys.exit(0)
+    return answer == 'y' or answer == ''
+
+
+def ask_user_to_choose(options, msg='Choose option'):
+    assert(len(options) > 0)
+
+    pprint(f"{msg}:")
+    for i, option in enumerate(options, 1):
+        pprint(f"\t{i}) {option}")
+    print(f"> ", end='')
+
+    while True:
+        try:
+            answer = input().strip().lower()
+        except KeyboardInterrupt:
+            print()
+            break
+
+        if answer == '':
+            return options[0]
+
+        if answer.isdigit() and 0 < int(answer) and int(answer) <= len(options):
+            return options[int(answer) - 1]
+
+        print(f"Wrong choose '{answer}'\n> ", end='')
+    return None
+
+
+def execute_command(command, dummy=False, **kwargs):
+    if dummy:
+        pprint(':spiral_shell: will run {}'.format(command))
+        return
+    pprint(':spiral_shell: {}'.format(command))
+    subprocess.run(command, shell=True, check=True, **kwargs)
+
+
+def format_build(source_code_dir : Path, build_type : str):
+    build_type_icon = {
+        "debug":   ":artist_palette:",
+        "release": ":rocket:",
+        "reldeb":  ":rocket:",
+        "asan":    ":house:",
+        "msan":    ":thread:",
+        "tsan":    ":thread:",
+        "ubsan":   ":thread:",
+    }.get(build_type, "")
+    git_branch = subprocess.run(["git", "symbolic-ref", "--short", "HEAD"], encoding='utf-8', cwd=source_code_dir, capture_output=True, check=False)
+    if (git_branch.returncode != 0):
+        git_branch = subprocess.run(["git", "rev-parse", "--short", "HEAD"], encoding='utf-8', cwd=source_code_dir, capture_output=True, check=True)
+
+    build_suffix = str(source_code_dir.relative_to(Path.home())).removeprefix('ClickHouse').removeprefix('clickhouse')
+    return f"{build_type_icon} '{build_suffix}' {git_branch.stdout.strip()} "
+
+
+def build_project(source_code_dir : Path, build_type : str, is_dummy : bool, use_cmake : Optional[bool]):
+    if not source_code_dir.is_dir():
+        raise Exception("Source code dir not found: {}".format(source_code_dir))
+    pprint(f"===== {format_build(source_code_dir, build_type)} =====")
+
+    build_dir = source_code_dir / f'{BUILD_DIR_PREFIX}{build_type}'
+    run_cmd = partial(execute_command, dummy=is_dummy)
+    try:
+        is_cmake_initialized = Path.is_file(build_dir / 'CMakeCache.txt')
+        if use_cmake or not is_cmake_initialized:
+            if not use_cmake and use_cmake is not None:
+                pprint(f"Skipping cmake initialization in {build_dir}")
+                return False
+            cmake_command = " ".join([f"cmake -S {source_code_dir} -B {build_dir}", *BUILD_TYPE_ARGS[build_type]])
+            run_cmd(cmake_command)
+        build_command = " ".join(["ninja", "-C", str(build_dir), *BUILD_TARGETS])
+        run_cmd(build_command)
+    except subprocess.CalledProcessError as e:
+        pprint(e)
+        return False
+    except KeyboardInterrupt:
+        pprint("\n:stop_sign:Canceled by user")
+        return False
+    return True
+
+
+def build_type_complete(prefix):
+    build_types = [build_type for build_type in BUILD_TYPE_ARGS if build_type.startswith(prefix)]
+    if len(build_types) == 0:
+        raise Exception(f"Unknown build type: {prefix}")
+    return build_types[0]
+
+
+def main(args):
+    if args.tmux and os.getenv('TMUX') is None:
+        command_args = ' '.join(sys.argv)
+        if not args.build:
+            command_args += ' --build all'
+        command = f'tmux new-session "{command_args}"'
+        print(f'Run in tmux: \'{command}\'')
+        subprocess.run(command, shell=True, check=True)
+        sys.exit(0)
+
+    if args.build and args.build != ['all']:
+        args.build = [build_type_complete(prefix) for prefix in args.build]
+
+    build_infos = defaultdict(list)
+    for path in args.path or [Path.cwd()]:
+        key, value = get_build_params(path, args.build)
+        build_infos[key].extend(value)
+    build_infos = {k: list(dict.fromkeys(v)) for k, v in build_infos.items()}
+    if not build_infos:
+        pprint("No binary found")
+        return
+
+    print('Build projects:')
+    for src_dir, build_types in build_infos.items():
+        pprint(f"{src_dir}: {build_types}")
+    print()
+
+    for src_dir, build_types in build_infos.items():
+        for build_type in build_types:
+            is_ok = build_project(src_dir, build_type, args.n > 0, args.cmake)
+            if not is_ok:
+                pprint(f":warning: {format_build(src_dir, build_type)} failed")
+                del build_infos[src_dir][build_types.index(build_type)]
+
+    if args.tmux:
+        print("Press Enter to close the tmux window...")
+        rlist, _, _ = select.select([sys.stdin], [], [], 3 * 3600)
+        if rlist:
+            rlist[0].readline()
+
+    if not args.link and not args.run and not args.install:
+        return
+
+    build_paths = [s / f'{BUILD_DIR_PREFIX}{t}' for s, ts in build_infos.items() for t in ts]
+    if len(build_paths) == 0:
+        pprint("No binary found")
+        return
+
+    build_path = None
+    if len(build_paths) == 1 or isinstance(args.run, str):
+        build_path = build_paths[0]
+
+    if not build_path:
+        return
+
+    binary_path = build_path / BINARY_RELATIVE_PATH
+
+    if args.install:
+        execute_command(f"sudo {binary_path} install")
+        execute_command(f"sudo clickhouse restart")
+
+    if args.link or args.run:
+        pprint(":link: {}link '{}' <- '{}'".format("" if args.n <= 1 else "will ", binary_path, SYMLINK_PATH))
+        if args.n <= 1:
+            force_symlink(binary_path, SYMLINK_PATH)
+
+    if args.run or args.loop:
+        cwd = Path(SERVER_CWD).resolve()
+        cwd.mkdir(parents=True, exist_ok=True)
+        if args.clear > 1:
+            # remove all files in cwd
+            for path in cwd.iterdir():
+                if path.is_file():
+                    path.unlink()
+                elif path.is_dir():
+                    shutil.rmtree(path)
+        elif args.clear > 0:
+            log_file_path = cwd / 'log.txt'
+            log_file_path.unlink(missing_ok=True)
+
+        if Path.is_file(cwd / 'status'):
+            pid = None
+            with open(cwd / 'status', 'r') as status_file:
+                pid = status_file.readline().strip().removeprefix('PID: ')
+            if pid and args.force:
+                try:
+                    print(f":warning: Killing the server running with pid {pid}...")
+                    os.kill(int(pid), 9)
+                except OSError as err:
+                    print(err)
+
+
+        src_dir = build_path.parent.parent
+        port = os.environ.get('BLD_RUN_PORT', None)
+        try:
+            if port:
+                execute_command(f"{binary_path} server -L log.txt --config {src_dir}/programs/server/config.xml -- --tcp_port {port}", cwd=cwd, dummy=args.n > 1)
+            else:
+                execute_command(f"{binary_path} server -L log.txt --config {src_dir}/programs/server/config.xml", cwd=cwd, dummy=args.n > 1)
+        except KeyboardInterrupt:
+            try:
+                icon = 'counterclockwise_arrows_button' if args.loop else 'warning'
+                pprint(f'\n:{icon}:Terminating server')
+                time.sleep(3)
+                if args.loop:
+                    return main(args)
+            except KeyboardInterrupt:
+                pass
+            pprint('\n:stop_sign:Terminated')
+
+
+if __name__ == "__main__":
+    main(parse_args())

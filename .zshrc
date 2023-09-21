@@ -85,6 +85,7 @@ alias cp='nocorrect cp'
 alias mkdir='nocorrect mkdir'
 alias sudo='nocorrect sudo'
 alias curl='noglob curl'
+alias axel='noglob axel'
 
 alias ll='ls -lh'
 alias la='ls -a'

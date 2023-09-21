@@ -490,7 +490,7 @@
         "when": "remoteFileDialogVisible"
     },
     {
-        "key": "cmd+; cmd+s",
+        "key": "cmd+; s",
         "command": "editor.action.insertSnippet"
     },
     {

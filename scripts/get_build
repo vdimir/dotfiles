@@ -13,72 +13,43 @@ import stat
 def download_file(url, output):
     with requests.get(url, stream=True) as r:
         r.raise_for_status()
-        total_size = int(r.headers.get('content-length', 0))
+        total_size = int(r.headers.get("content-length", 0))
         block_size = 8192
-        print('Downloading {} to {} (size {:.2f} MB)'.format(url, output, total_size / 1024 / 1024))
-        with open(output, 'wb') as f:
-            for chunk in tqdm(r.iter_content(chunk_size=block_size), total=total_size // block_size):
+        print(
+            "Downloading {} to {} (size {:.2f} MB)".format(
+                url, output, total_size / 1024 / 1024
+            )
+        )
+        with open(output, "wb") as f:
+            for chunk in tqdm(
+                r.iter_content(chunk_size=block_size), total=total_size // block_size
+            ):
                 f.write(chunk)
 
+
 BUILD_TYPES = {
-    None: 'binary_release',
-    'release': 'binary_release',
-    'debug': 'package_debug',
-    'tsan': 'package_tsan',
-    'asan': 'package_asan',
-    'msan': 'package_msan',
+    None: "binary_release",
+    "release": "binary_release",
+    "debug": "package_debug",
+    "tsan": "package_tsan",
+    "asan": "package_asan",
+    "msan": "package_msan",
+    "ubsan": "package_ubsan",
 }
+
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('ref')
-    parser.add_argument('-o', '--output', type=str, default=None)
-    parser.add_argument('-f', '--force', action='store_true')
-    parser.add_argument('-t', '--type', choices=BUILD_TYPES.keys())
-    parser.add_argument('-n', action='store_true')
+    parser.add_argument("ref")
+    parser.add_argument("-o", "--output", type=str, default=None)
+    parser.add_argument("-f", "--force", action="store_true")
+    parser.add_argument("-t", "--type", choices=BUILD_TYPES.keys())
+    parser.add_argument("-n", action="store_true")
     return parser.parse_args()
 
 
-def get_build_url(prnum, build_type=None, commit=None):
-    if commit:
-        return f'https://s3.amazonaws.com/clickhouse-builds/{prnum}/{commit}/{BUILD_TYPES[build_type]}/clickhouse'
-
-    result = subprocess.run(['gh', 'pr', 'checks', '-R', 'ClickHouse/ClickHouse', str(prnum)], stdout=subprocess.PIPE)
-    result = result.stdout.decode('utf-8')
-
-
-    fast_test_report_url = None
-    #
-    for line in result.splitlines():
-        row = line.split('\t')
-        if row and row[0] == 'Fast test':
-            fast_test_report_url = row[3]
-
-        if row and row[0] == 'ClickHouse build check':
-            break
-    else:
-        if build_type is None and commit is None and fast_test_report_url:
-            print('ClickHouse build check not found, using Fast test report')
-            return fast_test_report_url.replace('fast_test.html', 'fast_test/clickhouse')
-
-        raise Exception('ClickHouse build check not found')
-    report_url = row[3]
-    match = re.match(r'https://s3.amazonaws.com/clickhouse-builds/[0-9]{5}/[a-f0-9]+/clickhouse_build_check/report.html', report_url)
-
-    if not match:
-        raise Exception('ClickHouse build check url is invalid')
-    build_url = report_url.replace('clickhouse_build_check/report.html', f'{BUILD_TYPES[build_type]}/clickhouse')
-    return build_url
-
-
-def get_default_filename(prnum, build_type):
-    if not build_type:
-        return f'clickhouse_{prnum}'
-    return f'clickhouse_{prnum}_{build_type}'
-
-
 def parse_ref(ref):
-    match = re.search(r'([0-9]{5})(/[a-f0-9]+)?', ref)
+    match = re.search(r"([0-9]{5})(/[a-f0-9]+)?", ref)
     if not match:
         return None
     num = int(match.group(1))
@@ -88,10 +59,65 @@ def parse_ref(ref):
     return num, None
 
 
+def get_build_url(ref, build_type=None):
+    if ref.startswith("https://") and ref.endswith("/clickhouse"):
+        return None, None, ref
+
+    prnum, commit = parse_ref(ref)
+
+    if commit:
+        return f"https://s3.amazonaws.com/clickhouse-builds/{prnum}/{commit}/{BUILD_TYPES[build_type]}/clickhouse"
+
+    result = subprocess.run(
+        ["gh", "pr", "checks", "-R", "ClickHouse/ClickHouse", str(prnum)],
+        stdout=subprocess.PIPE,
+    )
+    result = result.stdout.decode("utf-8")
+
+    fast_test_report_url = None
+
+    for line in result.splitlines():
+        row = line.split("\t")
+        if row and row[0] == "Fast test":
+            fast_test_report_url = row[3]
+
+        if row and row[0] == "ClickHouse build check":
+            break
+    else:
+        if build_type is None and commit is None and fast_test_report_url:
+            print("ClickHouse build check not found, using Fast test report")
+            return (
+                prnum,
+                commit,
+                fast_test_report_url.replace("fast_test.html", "fast_test/clickhouse"),
+            )
+        raise Exception(f"ClickHouse build check not found: {result}")
+    report_url = row[3]
+    match = re.match(
+        r"https://s3.amazonaws.com/clickhouse-[a-z-]+/([0-9]{5}/[a-f0-9]+)/clickhouse_build_check/report.html",
+        report_url,
+    )
+
+    if not match:
+        raise Exception(f"ClickHouse build check url is invalid: {report_url}")
+
+    prcommit = match.group(1)
+    print(f"Using commmit {match.group(1)},report {report_url}")
+    build_url = f"https://s3.amazonaws.com/clickhouse-builds/PRs/{prcommit}/{BUILD_TYPES[build_type]}/clickhouse"
+    return prnum, commit, build_url
+
+
+def get_default_filename(prnum, build_type):
+    if not build_type:
+        return f"clickhouse_{prnum}"
+    return f"clickhouse_{prnum}_{build_type}"
+
+
 def main(args):
+    num, commit, build_url = get_build_url(args.ref, build_type=args.type)
+
+    print(f"PR {num} @ {commit}")
     output_file = None
-    num, commit = parse_ref(args.ref)
-    print(f'PR {num} @ {commit}')
     if args.output is None:
         output_file = get_default_filename(num, args.type)
     elif os.path.isdir(args.output):
@@ -100,9 +126,8 @@ def main(args):
         output_file = args.output
 
     if os.path.isfile(output_file) and not args.force and not args.n:
-        raise Exception('File {} already exists'.format(output_file))
+        raise Exception("File {} already exists".format(output_file))
 
-    build_url = get_build_url(num, args.type, commit=commit)
     if args.n:
         print(build_url)
         return
@@ -111,9 +136,20 @@ def main(args):
 
     st = os.stat(output_file)
     os.chmod(output_file, st.st_mode | stat.S_IEXEC)
-    print('Downloaded to {} (size {:.2f} MB)'.format(output_file, st.st_size / 1024 / 1024))
+    print(
+        "Downloaded to {} (size {:.2f} MB)".format(
+            output_file, st.st_size / 1024 / 1024
+        )
+    )
+    print("Running")
+    subprocess.run([
+        f"./{output_file}",
+        "local" ,
+        "-q",
+        "SELECT 'build' || formatReadableTimeDelta(now() - parseDateTimeBestEffort(value)) || 'ago' "
+        "FROM system.build_options WHERE name == 'GIT_DATE'"
+    ])
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main(parse_args())
-

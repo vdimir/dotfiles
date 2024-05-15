@@ -216,7 +216,7 @@
         "when": "textCompareEditorVisible"
     },
     {
-        "key": "cmd+e cmd+w",
+        "key": "cmd+e cmd+s",
         "command": "workbench.action.compareEditor.previousChange",
         "when": "textCompareEditorVisible"
     },
@@ -502,5 +502,39 @@
         "key": "shift+cmd+\\",
         "command": "-editor.action.jumpToBracket",
         "when": "editorTextFocus"
+    },
+    {
+        "key": "cmd+i",
+        "command": "-emojisense.quickEmojiTerminal",
+        "when": "terminalFocus"
+    },
+    {
+        "key": "cmd+i",
+        "command": "-emojisense.quickEmoji",
+        "when": "editorTextFocus"
+    },
+    {
+        "key": "shift+cmd+i",
+        "command": "-emojisense.quickEmojitextTerminal",
+        "when": "terminalFocus"
+    },
+    {
+        "key": "shift+cmd+i",
+        "command": "-emojisense.quickEmojitext",
+        "when": "editorTextFocus"
+    },
+    {
+        "key": "cmd+; c",
+        "command": "-testing.runAtCursor",
+        "when": "editorTextFocus"
+    },
+    {
+        "key": "cmd+; c",
+        "command": "merge-conflict.next"
+    },
+    {
+        "key": "shift+cmd+e",
+        "command": "-workbench.view.explorer",
+        "when": "viewContainer.workbench.view.explorer.enabled"
     }
 ]

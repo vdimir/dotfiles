@@ -21,7 +21,7 @@ except ImportError:
     def pprint(msg, **kwargs):
         print(str(msg), **kwargs)
 
-CLANG_VERSION = int(os.environ.get('BLD_CLANG_VERSION', 16))
+CLANG_VERSION = int(os.environ.get('BLD_CLANG_VERSION', 17))
 
 BUILD_TARGETS = ["clickhouse-server", "clickhouse-client"]
 
@@ -58,16 +58,14 @@ def get_build_args(build_type, sanitizer = None, compiler_flags = None, extra_cm
     return cmake_options
 
 BUILD_TYPE_ARGS = {
+    "release": get_build_args("RelWithDebInfo", compiler_flags="-fno-omit-frame-pointer"),
+    "release_omit": get_build_args("RelWithDebInfo"),
     "debug":   get_build_args("Debug"),
-    "cov_deb":   get_build_args("Debug", extra_cmake_options=["-DWITH_COVERAGE=1"]),
-    "cov_rel":   get_build_args("RelWithDebInfo", compiler_flags="-fno-omit-frame-pointer -fno-inline", extra_cmake_options=["-DWITH_COVERAGE=1"]),
-    "release": get_build_args("RelWithDebInfo"),
-    "release_noomit": get_build_args("RelWithDebInfo", compiler_flags="-fno-omit-frame-pointer"),
-    "reldeb":  get_build_args("RelWithDebInfo"),
     "asan":    get_build_args("RelWithDebInfo", sanitizer="address"),
     "msan":    get_build_args("RelWithDebInfo", sanitizer="memory"),
     "tsan":    get_build_args("RelWithDebInfo", sanitizer="thread"),
     "ubsan":   get_build_args("RelWithDebInfo", sanitizer="undefined"),
+    "cov_rel":   get_build_args("RelWithDebInfo", compiler_flags="-fno-omit-frame-pointer -fno-inline", extra_cmake_options=["-DSANITIZE_COVERAGE=1"]),
 }
 
 
@@ -119,8 +117,12 @@ def get_build_params(path, build_types):
         path_to_check_time = 'programs'
         all_builds = [p for p in path.glob(f'{BUILD_DIR_PREFIX}*') if Path.exists(p / path_to_check_time)]
         # all_builds = sorted(all_builds, key=lambda p: Path.stat(p / path_to_check_time).st_ctime, reverse=True)
+        all_builds = [p.name for p in all_builds]
+        for prio in BUILD_TYPE_ARGS:
+            if prio in all_builds:
+                return path, [prio]
         if all_builds:
-            return path, [all_builds[0].name]
+            return path, [all_builds[0]]
 
     raise Exception("Can't find build in path: '{}'".format(path))
 
@@ -170,6 +172,17 @@ def ask_user_to_choose(options, msg='Choose option'):
 
         print(f"Wrong choose '{answer}'\n> ", end='')
     return None
+
+
+def read_envs_from_file(cred_env_path):
+    envs = {}
+    if not cred_env_path.is_file():
+        return envs
+    with open(cred_env_path, 'r') as cred_env_file:
+        for line in cred_env_file.readlines():
+            key, value = line.removeprefix('export ').strip().split('=', 1)
+            envs[key] = value
+    return envs
 
 
 def execute_command(command, dummy=False, **kwargs):
@@ -325,11 +338,14 @@ def main(args):
 
         src_dir = build_path.parent.parent
         port = os.environ.get('BLD_RUN_PORT', None)
+
+        envs_to_run = read_envs_from_file(Path.home() / '.aws.cred')
+
         try:
             if port:
-                execute_command(f"{binary_path} server -L log.txt --config {src_dir}/programs/server/config.xml -- --tcp_port {port}", cwd=cwd, dummy=args.n > 1)
+                execute_command(f"{binary_path} server -L log.txt --config {src_dir}/programs/server/config.xml -- --tcp_port {port}", cwd=cwd, env=envs_to_run, dummy=args.n > 1)
             else:
-                execute_command(f"{binary_path} server -L log.txt --config {src_dir}/programs/server/config.xml", cwd=cwd, dummy=args.n > 1)
+                execute_command(f"{binary_path} server -L log.txt --config {src_dir}/programs/server/config.xml", cwd=cwd, env=envs_to_run, dummy=args.n > 1)
         except KeyboardInterrupt:
             try:
                 icon = 'counterclockwise_arrows_button' if args.loop else 'warning'

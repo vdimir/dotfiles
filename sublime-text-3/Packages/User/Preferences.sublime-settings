@@ -7,7 +7,9 @@
 		"*.pyc",
 		"*.npy",
 		"*.ipynb",
-		".DS_Store"
+		".DS_Store",
+		"*.sublime-workspace",
+		"*.sublime-project",
 	],
 	"find_selected_text": true,
 	"folder_exclude_patterns":
@@ -27,9 +29,10 @@
 	],
 	"font_size": 13,
 	"highlight_line": true,
-	"hot_exit": true,
+	"hot_exit": false,
 	"ignored_packages":
 	[
+		"Package Control",
 		"Vintage",
 	],
 	"predawn_tabs_small": true,
@@ -45,8 +48,8 @@
 	"show_errors_inline": false,
 	"spell_check": false,
 	"tab_size": 4,
-	"translate_tabs_to_spaces": false,
-	"trim_trailing_white_space_on_save": false,
+	"translate_tabs_to_spaces": true,
+	"trim_trailing_white_space_on_save": true,
 	"ui_scale": 1.0,
 	"caret_style": "smooth",
 
@@ -56,4 +59,6 @@
 	"dark_color_scheme": "myown-dark.sublime-color-scheme",
 	"light_color_scheme": "myown-light.sublime-color-scheme",
 	"theme": "auto",
+	"index_files": false,
+	"create_window_at_startup": false,
 }

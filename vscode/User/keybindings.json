@@ -536,5 +536,15 @@
         "key": "shift+cmd+e",
         "command": "-workbench.view.explorer",
         "when": "viewContainer.workbench.view.explorer.enabled"
+    },
+    {
+        "key": "cmd+e cmd+r",
+        "command": "git.revertSelectedRanges",
+        "when": "!operationInProgress"
+    },
+    {
+        "key": "cmd+right",
+        "command": "-editor.action.inlineSuggest.acceptNextLine",
+        "when": "inlineSuggestionVisible && !editorReadonly"
     }
 ]

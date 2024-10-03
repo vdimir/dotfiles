@@ -1,0 +1,58 @@
+#!/usr/bin/env python3
+
+import argparse
+import sys
+import pyperclip
+import shutil
+import os
+import datetime
+import subprocess
+import errno
+
+
+def force_symlink(file1, file2):
+    try:
+        os.symlink(file1, file2)
+    except OSError as e:
+        if e.errno == errno.EEXIST:
+            os.remove(file2)
+            os.symlink(file1, file2)
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description='Dowload ClickHouse CI logs')
+    parser.add_argument('url', nargs='?', help='URL to download logs from')
+    parser.add_argument('--folder', '-f', default='~/_logs', help='Folder to save logs to')
+    return parser.parse_args()
+
+def main(args):
+    if not args.url:
+        args.url = pyperclip.paste().strip()
+    if not args.url.startswith('https://'):
+        print(f"Invalid URL '{args.url}'")
+        sys.exit(1)
+
+    print(args.url)
+
+    # download to ~/_logs
+    # generate unique name with current datetime
+    name_prefix = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    file_basename = os.path.basename(args.url)
+    file_path = os.path.expanduser(f"{args.folder}/{name_prefix}_{file_basename}")
+
+    dld_command = f"axel -o {file_path} {args.url}"
+    subprocess.run(dld_command, shell=True, check=True)
+    if file_basename.endswith('.log.gz'):
+        output_file = file_path.removesuffix('.gz')
+        subprocess.run(f"gunzip -c {file_path} > {output_file}", shell=True, check=True)
+    elif file_basename.endswith('.log.zst'):
+        output_file = file_path.removesuffix('.zst')
+        subprocess.run(f"zstd -d -c {file_path} > {output_file}", shell=True, check=True)
+    else:
+        output_file = file_path
+
+    print(f"Downloaded to {output_file}")
+    pyperclip.copy(output_file)
+
+if __name__ == '__main__':
+    main(parse_args())

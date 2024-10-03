@@ -21,9 +21,10 @@ except ImportError:
     def pprint(msg, **kwargs):
         print(str(msg), **kwargs)
 
-CLANG_VERSION = int(os.environ.get('BLD_CLANG_VERSION', 17))
+CLANG_VERSION = int(os.environ.get('BLD_CLANG_VERSION', 18))
 
 BUILD_TARGETS = ["clickhouse-server", "clickhouse-client"]
+BUILD_TARGETS_ALL = [*BUILD_TARGETS, "clickhouse-odbc-bridge", "clickhouse-library-bridge", "unit_tests_dbms"]
 
 SYMLINK_PATH = os.path.expanduser("~/clickhouse")
 SERVER_CWD = os.path.expanduser(os.environ.get('BLD_SERVER_CWD', "~/_tmp"))
@@ -36,8 +37,9 @@ def get_build_args(build_type, sanitizer = None, compiler_flags = None, extra_cm
     cmake_options = [
         f"-DCMAKE_C_COMPILER=`which clang-{CLANG_VERSION}`",
         f"-DCMAKE_CXX_COMPILER=`which clang++-{CLANG_VERSION}`",
-        f"-DCMAKE_C_COMPILER_LAUNCHER=ccache",
-        f"-DCMAKE_CXX_COMPILER_LAUNCHER=ccache",
+        # f"-DCMAKE_C_COMPILER_LAUNCHER=sccache",
+        # f"-DCMAKE_CXX_COMPILER_LAUNCHER=sccache"
+        # f"-DCOMPILER_CACHE=sccache",
         f"-DENABLE_CLICKHOUSE_SELF_EXTRACTING=OFF",
         f"-DCMAKE_BUILD_TYPE={build_type}",
         f"-DENABLE_BENCHMARKS=ON",
@@ -93,10 +95,12 @@ def parse_args():
     parser.add_argument("--install", action=ToggleAction, default=False)
     parser.add_argument("--cmake", action=ToggleAction, default=None)
     parser.add_argument("--run", "-r", action=ToggleAction, default=os.environ.get('BLD_RUN', False))
+    parser.add_argument("--nnd", action=ToggleAction, default=None)
     default_bld_type = os.environ.get('BLD_TYPE')
     parser.add_argument("--build", "-b", nargs='+', default=[default_bld_type] if default_bld_type else [])
     parser.add_argument("--tmux", action=ToggleAction, default=False)
     parser.add_argument("--loop", action=ToggleAction, default=False)
+    parser.add_argument("--all-targets", action=ToggleAction, default=False)
     return parser.parse_args()
 
 def get_build_params(path, build_types):
@@ -185,11 +189,12 @@ def read_envs_from_file(cred_env_path):
     return envs
 
 
-def execute_command(command, dummy=False, **kwargs):
+def execute_command(command, dummy=False, silent=False, **kwargs):
     if dummy:
         pprint(':spiral_shell: will run {}'.format(command))
         return
-    pprint(':spiral_shell: {}'.format(command))
+    if not silent:
+        pprint(':spiral_shell: {}'.format(command))
     subprocess.run(command, shell=True, check=True, **kwargs)
 
 
@@ -211,7 +216,7 @@ def format_build(source_code_dir : Path, build_type : str):
     return f"{build_type_icon} '{build_suffix}' {git_branch.stdout.strip()} "
 
 
-def build_project(source_code_dir : Path, build_type : str, is_dummy : bool, use_cmake : Optional[bool]):
+def build_project(source_code_dir : Path, build_type : str, is_dummy : bool, use_cmake : Optional[bool], targets : list[str]):
     if not source_code_dir.is_dir():
         raise Exception("Source code dir not found: {}".format(source_code_dir))
     pprint(f"===== {format_build(source_code_dir, build_type)} =====")
@@ -226,7 +231,7 @@ def build_project(source_code_dir : Path, build_type : str, is_dummy : bool, use
                 return False
             cmake_command = " ".join([f"cmake -S {source_code_dir} -B {build_dir}", *BUILD_TYPE_ARGS[build_type]])
             run_cmd(cmake_command)
-        build_command = " ".join(["ninja", "-C", str(build_dir), *BUILD_TARGETS])
+        build_command = " ".join(["ninja", "-C", str(build_dir), *targets])
         run_cmd(build_command)
     except subprocess.CalledProcessError as e:
         pprint(e)
@@ -269,11 +274,14 @@ def main(args):
     print('Build projects:')
     for src_dir, build_types in build_infos.items():
         pprint(f"{src_dir}: {build_types}")
+        preload_cmake = Path(src_dir) / 'PreLoad.cmake'
+        if preload_cmake.is_file():
+            execute_command(f"""sed -i 's/message(FATAL_ERROR "$/message( "/g' {preload_cmake}""", silent=True)
     print()
 
     for src_dir, build_types in build_infos.items():
         for build_type in build_types:
-            is_ok = build_project(src_dir, build_type, args.n > 0, args.cmake)
+            is_ok = build_project(src_dir, build_type, args.n > 0, args.cmake, BUILD_TARGETS_ALL if args.all_targets else BUILD_TARGETS)
             if not is_ok:
                 pprint(f":warning: {format_build(src_dir, build_type)} failed")
                 del build_infos[src_dir][build_types.index(build_type)]
@@ -324,10 +332,14 @@ def main(args):
             log_file_path = cwd / 'log.txt'
             log_file_path.unlink(missing_ok=True)
 
-        if Path.is_file(cwd / 'status'):
+        def read_pid(path):
             pid = None
-            with open(cwd / 'status', 'r') as status_file:
+            with open(path, 'r') as status_file:
                 pid = status_file.readline().strip().removeprefix('PID: ')
+            return pid
+
+        if Path.is_file(cwd / 'status'):
+            pid = read_pid(cwd / 'status')
             if pid and args.force:
                 try:
                     print(f":warning: Killing the server running with pid {pid}...")

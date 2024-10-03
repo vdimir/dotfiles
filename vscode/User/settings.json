@@ -45,32 +45,31 @@
         "[Base16 Grayscale Dark]": {
             "comments": {
                 "fontStyle": "",
-                "foreground": "#a0a0a0"
+                "foreground": "#d0d0d0"
             },
-            "functions": "#d4d4d4",
-            "variables": "#a0a0a0",
-            "keywords": "#a0a0a0",
-            "types": "#a0a0a0",
-            "strings": "#a0a0a0",
-            "textMateRules": [
-                {
-                    "scope": "entity.name.import.go",
-                    "settings": {
-                        "fontStyle": ""
-                    }
-                },
-                {
-                    "scope": "entity.name.type.class",
-                    "settings": { "foreground": "#d4d4d4" }
-                },
-                {
-                    "scope": "entity.name.function",
-                    "settings": { "foreground": "#d4d4d4" }
-                },
-                {
-                    "scope": "entity.name",
-                    "settings": { "foreground": "#d4d4d4" }
+            "functions": "#d0d0d0",
+            "variables": "#b0d0d0",
+            "keywords": "#b0d0d0",
+            "types": "#b0d0d0",
+            "strings": "#b0d0d0",
+            "textMateRules": [ {
+                "scope": [
+                    "comment",
+                    "constant",
+                    "entity",
+                    "keyword",
+                    "storage",
+                    "string",
+                    "support",
+                    "variable",
+                    "meta",
+                    "invalid",
+                    "markup",
+                ],
+                "settings": {
+                    "foreground": "#d0d0d0"
                 }
+            },
             ]
         }
     },
@@ -92,9 +91,12 @@
             "editorBracketHighlight.foreground3": "#202030",
         },
         "[Base16 Grayscale Dark]": {
-            "editor.background": "#1e1e1e",
+            "editor.background": "#282c32",
             "editorCursor.foreground": "#d4d4d4",
             "editor.foreground": "#d4d4d4",
+            "editorBracketHighlight.foreground1": "#d0d0a0",
+            "editorBracketHighlight.foreground2": "#a0d0d0",
+            "editorBracketHighlight.foreground3": "#d0d0d0",
         },
     },
     "editor.rulers": [140],
@@ -256,7 +258,7 @@
     "editor.inlineSuggest.enabled": true,
     "editor.suggest.snippetsPreventQuickSuggestions": false,
     "editor.snippetSuggestions": "top",
-    "terminal.integrated.enableMultiLinePasteWarning": "always",
+    "terminal.integrated.enableMultiLinePasteWarning": false,
     "editor.minimap.enabled": false,
     "bookmarks.gutterIconFillColor": "#c2d7f0",
     "editor.detectIndentation": false,
@@ -278,11 +280,16 @@
     "workbench.tree.enableStickyScroll": true,
     "cmake.showOptionsMovedNotification": false,
     "editor.dragAndDrop": false,
-    "diffEditor.renderSideBySide": false,
+    "diffEditor.renderSideBySide": true,
     "gitlens.launchpad.indicator.enabled": false,
     "github.copilot.editor.enableAutoCompletions": true,
     "cmake.pinnedCommands": [
         "workbench.action.tasks.configureTaskRunner",
         "workbench.action.tasks.runTask"
     ],
+    "diffEditor.hideUnchangedRegions.enabled": true,
+    "gitlens.hovers.enabled": false,
+    "editor.hover.sticky": false,
+    "editor.hover.hidingDelay": 0,
+    "editor.hover.enabled": false,
 }

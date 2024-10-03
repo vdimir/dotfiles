@@ -81,7 +81,7 @@ def get_build_url(ref, build_type=None):
         if row and row[0] == "Fast test":
             fast_test_report_url = row[3]
 
-        if row and row[0] == "ClickHouse build check":
+        if row and row[0] == "Builds":
             break
     else:
         if build_type is None and commit is None and fast_test_report_url:
@@ -94,7 +94,7 @@ def get_build_url(ref, build_type=None):
         raise Exception(f"ClickHouse build check not found: {result}")
     report_url = row[3]
     match = re.match(
-        r"https://s3.amazonaws.com/clickhouse-[a-z-]+/([0-9]{5}/[a-f0-9]+)/clickhouse_build_check/report.html",
+        r"https://s3.amazonaws.com/clickhouse-[a-z-]+/([0-9]{5}/[a-f0-9]+)/builds/report.html",
         report_url,
     )
 

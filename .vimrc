@@ -16,7 +16,7 @@ set iminsert=0
 set imsearch=0
 highlight lCursor guifg=NONE guibg=Cyan
 
-syntax on
+syntax off
 
 set hlsearch
 set incsearch

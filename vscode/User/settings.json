@@ -167,8 +167,6 @@
     "editor.unicodeHighlight.nonBasicASCII": false,
     "security.workspace.trust.banner": "always",
     "security.workspace.trust.enabled": false,
-    "openInGitHub.remote.name": "upstream",
-    "openInGitHub.useLocalBranch": false,
     "editor.cursorBlinking": "smooth",
     "editor.inlayHints.enabled": "off",
     "github.copilot.enable": {
@@ -258,7 +256,7 @@
     "editor.inlineSuggest.enabled": true,
     "editor.suggest.snippetsPreventQuickSuggestions": false,
     "editor.snippetSuggestions": "top",
-    "terminal.integrated.enableMultiLinePasteWarning": false,
+    "terminal.integrated.enableMultiLinePasteWarning": "never",
     "editor.minimap.enabled": false,
     "bookmarks.gutterIconFillColor": "#c2d7f0",
     "editor.detectIndentation": false,
@@ -292,4 +290,22 @@
     "editor.hover.sticky": false,
     "editor.hover.hidingDelay": 0,
     "editor.hover.enabled": false,
+    "task.autoDetect": "off",
+    "VsCodeTaskButtons.showCounter": false,
+    "VsCodeTaskButtons.tasks": [
+        {
+            "label": "$(run-all) Build",
+            "task": "bld",
+            "tooltip": "🛠️ Start the \"build\" task"
+        },
+        {
+            "label": "$(symbol-unit) Test",
+            "task": "test_runner",
+        },
+        {
+            "label": "$(debug-alt) Run",
+            "task": "t.sql",
+        },
+    ]
+
 }

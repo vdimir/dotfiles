@@ -244,17 +244,22 @@
         "command": "workbench.action.toggleMaximizedPanel"
     },
     {
-        "key": "cmd+a n",
-        "command": "workbench.action.terminal.focusNext",
-        "when": "terminalFocus"
-    },
-    {
         "key": "shift+cmd+]",
         "command": "-workbench.action.terminal.focusNext",
         "when": "terminalFocus && terminalHasBeenCreated && !terminalEditorFocus || terminalFocus && terminalProcessSupported && !terminalEditorFocus"
     },
     {
-        "key": "cmd+a c",
+        "key": "cmd+s n",
+        "command": "workbench.action.terminal.focusNext",
+        "when": "terminalFocus"
+    },
+    {
+        "key": "cmd+s cmd+s",
+        "command": "workbench.action.terminal.focusNext",
+        "when": "terminalFocus"
+    },
+    {
+        "key": "cmd+s c",
         "command": "workbench.action.terminal.newWithCwd",
         "args": { "cwd": "${workspaceFolder}" },
         "when": "terminalFocus && terminalHasBeenCreated && !terminalEditorFocus || terminalFocus && terminalProcessSupported && !terminalEditorFocus"
@@ -546,5 +551,10 @@
         "key": "cmd+right",
         "command": "-editor.action.inlineSuggest.acceptNextLine",
         "when": "inlineSuggestionVisible && !editorReadonly"
+    },
+    {
+        "key": "f5",
+        "command": "workbench.action.tasks.restartTask",
+        "when": "taskRunning"
     }
 ]

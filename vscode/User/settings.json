@@ -217,7 +217,7 @@
     "remote.SSH.remotePlatform": {
         "aws-dev": "linux"
     },
-    "editor.fontSize": 13,
+    "editor.fontSize": 14,
     "terminal.integrated.fontSize": 13,
     "editor.minimap.showSlider": "always",
     "terminal.integrated.altClickMovesCursor": false,

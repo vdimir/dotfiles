@@ -1,0 +1,72 @@
+// Zed settings
+//
+// For information on how to configure Zed, see the Zed
+// documentation: https://zed.dev/docs/configuring-zed
+//
+// To see all of Zed's default settings without changing your
+// custom settings, run the `open default settings` command
+// from the command palette or from `Zed` application menu.
+{
+  "ssh_connections": [
+    {
+      "host": "aws-dev",
+      "projects": [
+        {
+          "paths": [
+            "~/ClickHouseWE"
+          ]
+        },
+        {
+          "paths": [
+            "~/_dataset"
+          ]
+        },
+        {
+          "paths": [
+            "~/src/c-clang-wasm"
+          ]
+        }
+      ]
+    }
+  ],
+  "outline_panel": {
+    "dock": "right"
+  },
+  "assistant": {
+    "dock": "right",
+    "default_model": {
+      "provider": "copilot_chat",
+      "model": "gpt-4o"
+    },
+    "version": "2",
+  },
+  "vim_mode": false,
+  "theme": "One Dark",
+  "buffer_font_family": "JetBrains Mono",
+  "ui_font_size": 15,
+  "buffer_font_size": 14,
+  "ui_font_family": "JetBrains Mono",
+  "terminal": {
+    "blinking": "off"
+  },
+  "soft_wrap": "editor_width",
+  "collaboration_panel": { "button": false },
+  "chat_panel": { "button": false },
+  "notification_panel": { "button": false },
+  "show_call_status_icon": false,
+  "autosave": "on_focus_change",
+  "format_on_save": "off",
+  "languages": {
+    "Markdown": {
+      "tab_size": 4,
+      "soft_wrap": "editor_width"
+    }
+  },
+  "when_closing_with_no_tabs": "keep_window_open",
+  "git": {
+    "inline_blame": {
+      "enabled": false,
+      "delay_ms": 600
+    }
+  },
+}

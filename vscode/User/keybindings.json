@@ -359,8 +359,18 @@
         "command": "-workbench.action.moveEditorToNextGroup"
     },
     {
+        "key": "shift+cmd+[",
+        "command": "workbench.action.focusPreviousGroup",
+        "when": "editorFocus"
+    },
+    {
+        "key": "shift+cmd+]",
+        "command": "workbench.action.focusNextGroup",
+        "when": "editorFocus"
+    },
+    {
         "key": "shift+cmd+'",
-        "command": "workbench.action.quickOpenPreviousRecentlyUsedEditorInGroup",
+        "command": "workbench.action.quickOpenPreviousRecentlyUsedEditor",
         "when": "!activeEditorGroupEmpty"
     },
     {

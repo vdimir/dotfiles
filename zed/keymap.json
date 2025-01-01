@@ -1,0 +1,51 @@
+[
+  {
+    "bindings": {
+      "cmd-k": "workspace::ToggleBottomDock",
+      "cmd-'": "tab_switcher::Toggle",
+    }
+  },
+  {
+    "context": "TabSwitcher",
+    "bindings": {
+      "cmd-;": "menu::SelectPrev",
+      "cmd-'": "menu::SelectNext",
+      "cmd-backspace": "tab_switcher::CloseSelectedItem"
+    }
+  },
+  {
+    "context": "Terminal",
+    "bindings": {
+      "cmd-a c": "workspace::NewTerminal",
+      "cmd-w": ["workspace::SendKeystrokes", "ctrl-w"],
+      "cmd-d": ["workspace::SendKeystrokes", "ctrl-d"],
+    }
+  },
+  {
+    "context": "Editor",
+    "bindings": {
+      "cmd-g": ["workspace::SendKeystrokes", "cmd-f"],
+      "cmd-enter": "editor::NewlineBelow",
+      "cmd-j": "editor::JoinLines",
+    }
+  },
+  {
+    "context": "Pane",
+    "bindings": {
+      "f1": "pane::GoBack",
+      "shift-f1": "pane::GoForward",
+    }
+  },
+  {
+    "context": "BufferSearchBar && !in_replace > Editor",
+    "bindings": {
+      "cmd-g": "search::SelectNextMatch",
+    }
+  },
+  {
+    "context": "ContextEditor > Editor",
+    "bindings": {
+      "cmd-enter": "assistant::Assist",
+    }
+  },
+]

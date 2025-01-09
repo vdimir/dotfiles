@@ -559,7 +559,12 @@
     },
     {
         "key": "cmd+right",
-        "command": "-editor.action.inlineSuggest.acceptNextLine",
+        "command": "editor.action.inlineSuggest.acceptNextLine",
+        "when": "inlineSuggestionVisible && !editorReadonly"
+    },
+    {
+        "key": "cmd+right",
+        "command": "-editor.action.inlineSuggest.acceptNextWord",
         "when": "inlineSuggestionVisible && !editorReadonly"
     },
     {

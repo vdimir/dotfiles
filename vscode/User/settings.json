@@ -9,8 +9,8 @@
             },
             "functions": "#202030",
             "variables": "#202030",
-            "keywords": "#555560",
-            "types": "#555560",
+            "keywords": "#606070",
+            "types": "#606070",
             "strings": {
                 "foreground": "#606070"
             },
@@ -18,7 +18,11 @@
             "textMateRules": [
                 {
                     "scope":"keyword",
-                    "settings": { "foreground": "#555560" }
+                    "settings": { "foreground": "#606070" }
+                },
+                {
+                    "scope":"constant",
+                    "settings": { "foreground": "#606070" }
                 },
                 {
                     "scope": "meta.block",
@@ -30,11 +34,11 @@
                 },
                 {
                     "scope": "markup.list",
-                    "settings": { "foreground": "#404040" }
+                    "settings": { "foreground": "#606070" }
                 },
                 {
                     "scope": ["markup.italic", "markup.bold"],
-                    "settings": { "foreground": "#555555" }
+                    "settings": { "foreground": "#606070" }
                 },
                 {
                     "scope": ["entity.name.type.class", "entity.name.function", "entity.name"],

@@ -196,15 +196,15 @@
     "githubPullRequests.queries": [
         {
             "label": "Waiting For My Review",
-            "query": "is:open review-requested:${user}"
+            "query": "repo:${owner}/${repository} is:open review-requested:${user}"
         },
         {
             "label": "Assigned To Me",
-            "query": "is:open assignee:${user}"
+            "query": "repo:${owner}/${repository} is:open assignee:${user}"
         },
         {
             "label": "Created By Me",
-            "query": "is:open author:${user}"
+            "query": "repo:${owner}/${repository} is:open author:${user}"
         }
     ],
     "window.autoDetectColorScheme": true,
@@ -227,7 +227,7 @@
     "terminal.integrated.altClickMovesCursor": false,
     "terminal.integrated.copyOnSelection": true,
     "terminal.integrated.macOptionIsMeta": true,
-    "editor.stickyScroll.enabled": true,
+    "editor.stickyScroll.enabled": false,
     "yaclock.prefix": "",
     "yaclock.showDate": true,
     "yaclock.showDay": true,
@@ -310,6 +310,8 @@
             "label": "$(debug-alt) Run",
             "task": "t.sql",
         },
-    ]
-
+    ],
+    "clock.datetimeFormat": "HH:mm",
+    "clock.timezone": "Europe/Amsterdam",
 }
+

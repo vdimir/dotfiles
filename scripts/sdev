@@ -1,0 +1,83 @@
+#!/usr/bin/env python3
+
+"""
+Script for ssh-ing into particular folder on remote dev server interactively.
+"""
+
+import sys
+import os
+import re
+import subprocess
+import argparse
+import time
+from fnmatch import fnmatch
+
+import questionary
+
+class Stopwatch:
+    def __init__(self):
+        self.start = time.time()
+
+    def elapsed(self):
+        return time.time() - self.start
+
+if __name__ == '__main__':
+    argparser = argparse.ArgumentParser()
+    argparser.add_argument('-b', help='git branch pattern')
+    argparser.add_argument('-i', action='store_true', help='Interactive mode')
+    argparser.add_argument('cmd', nargs='*', default=None, help='Command to run')
+    args = argparser.parse_args()
+
+    get_folders_cmd = """
+        ssh aws-dev 'bash -c "for f in ClickHouse* clickhouse-*; do
+            [ -d \\"\\$f\\" ] || continue;
+            echo -n \\"\\$f \\";
+            git -C \\"\\$f\\" rev-parse --abbrev-ref HEAD;
+        done"'
+    """.strip()
+    process = subprocess.Popen(get_folders_cmd, shell=True, stdout=subprocess.PIPE)
+    sw = Stopwatch()
+    while process.poll() is None:
+        time.sleep(0.1)
+        print(f'\r{sw.elapsed():.02f}s', end='', flush=True)
+    print()
+    stdout, _ = process.communicate()
+    if process.returncode != 0:
+        print(stdout)
+        sys.exit(1)
+
+    folders_with_branches = list(filter(lambda x: len(x) == 2 and 'wasm' not in x[1], (name.strip().split(' ') for name in stdout.decode('utf-8').splitlines())))
+
+    selection = None
+    if args.b:
+        folders_with_branches = list(filter(lambda x: fnmatch(x[1], f"*{args.b}*"), folders_with_branches))
+        if len(folders_with_branches) == 1:
+            selection = 0
+
+    if not folders_with_branches:
+        print('No ClickHouse folders found')
+        sys.exit(1)
+
+    if selection is None:
+        selection = questionary.select(
+            "SSH into:",
+            choices=[questionary.Choice(f"{name} @ {branch}", i) for i, (name, branch) in enumerate(folders_with_branches)],
+            pointer='▸',
+            use_shortcuts=True,
+            style=questionary.Style([
+                ("highlighted", "fg:#ffffff"),
+                ("text", "fg:#aaaaaa"),
+            ])
+        ).ask()
+    if selection is None:
+        sys.exit(1)
+
+    folder, branch = folders_with_branches[selection]
+    if args.cmd:
+        command = ' '.join(args.cmd)
+        print(f"SSHing into {folder} @ '{branch}' and running '{command}'...")
+        rest = 'fish -l' if args.i else ''
+        subprocess.run(f"ssh -t aws-dev 'cd {folder}; {command}; {rest}'", shell=True)
+    else:
+        print(f"SSHing into {folder}...")
+        subprocess.run(f"ssh -t aws-dev 'cd {folder}; fish -l' ", shell=True)

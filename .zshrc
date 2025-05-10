@@ -74,7 +74,7 @@ fi
 
 alias dir='dir --color=auto'
 alias vdir='vdir --color=auto'
-alias grep='egrep --color=auto --text'
+alias grep='grep --color=auto --text'
 alias fgrep='fgrep --color=auto'
 alias egrep='egrep --color=auto'
 alias ls='ls --color=auto'
@@ -157,3 +157,10 @@ autoload -U +X bashcompinit && bashcompinit
 # zprof
 
 export TERM=xterm-256color
+
+export GOPATH=$HOME/go
+export PATH=$PATH:$GOPATH/bin
+
+export PATH="/opt/homebrew/opt/llvm/bin:$PATH"
+export LDFLAGS="-L/opt/homebrew/opt/llvm/lib"
+export CPPFLAGS="-I/opt/homebrew/opt/llvm/include"

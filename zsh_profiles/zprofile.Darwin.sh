@@ -5,6 +5,7 @@ FPATH="$(brew --prefix)/share/zsh/site-functions:${FPATH}"
 
 PATH="$(brew --prefix)/opt/findutils/libexec/gnubin:$(brew --prefix)/opt/grep/libexec/gnubin:$PATH"
 PATH="${HOME}/Library/Python/3.8/bin/:$PATH"
+PATH="${HOME}/Library/Python/3.9/bin/:$PATH"
 
 source $(brew --prefix zsh-syntax-highlighting)/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 

@@ -20,15 +20,15 @@
     clean = git-lfs clean -- %f
 [fetch]
     prune = true
-[include]
-    path = ~/.gitconfig.user
-[gpg]
-    program = gpg
 [commit]
     gpgsign = true
+[gpg]
+    format = ssh
 [merge]
     ff = false
 [rebase]
     autoStash = true
 [init]
     defaultBranch = main
+[include]
+    path = ~/.gitconfig.user

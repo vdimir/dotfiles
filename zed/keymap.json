@@ -8,7 +8,7 @@
   {
     "context": "TabSwitcher",
     "bindings": {
-      "cmd-;": "menu::SelectPrev",
+      "cmd-;": "menu::SelectPrevious",
       "cmd-'": "menu::SelectNext",
       "cmd-backspace": "tab_switcher::CloseSelectedItem"
     }
@@ -27,6 +27,8 @@
       "cmd-g": ["workspace::SendKeystrokes", "cmd-f"],
       "cmd-enter": "editor::NewlineBelow",
       "cmd-j": "editor::JoinLines",
+      "cmd-e cmd-e": "editor::GoToHunk",
+      "cmd-shift-e cmd-shift-e": "editor::GoToPreviousHunk",
     }
   },
   {
@@ -46,6 +48,17 @@
     "context": "ContextEditor > Editor",
     "bindings": {
       "cmd-enter": "assistant::Assist",
+    }
+  },
+
+  {
+    "context": "Editor && jupyter && !ContextEditor",
+    "use_key_equivalents": true,
+    "bindings": {
+      "f5": "repl::Run",
+      "f6": "repl::ClearOutputs",
+      "cmd-shift-enter": "repl::Run",
+      "ctrl-f": "repl::RunInPlace"
     }
   },
 ]

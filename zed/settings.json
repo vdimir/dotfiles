@@ -1,3 +1,4 @@
+B
 // Zed settings
 //
 // For information on how to configure Zed, see the Zed
@@ -17,6 +18,9 @@
   },
   "features": {
     "edit_prediction_provider": "copilot",
+  },
+  "project_panel": {
+    "hide_gitignore": true
   },
   "ssh_connections": [
     {

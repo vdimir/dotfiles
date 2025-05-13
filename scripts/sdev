@@ -46,7 +46,7 @@ if __name__ == '__main__':
         print(stdout)
         sys.exit(1)
 
-    folders_with_branches = list(filter(lambda x: len(x) == 2 and 'wasm' not in x[1], (name.strip().split(' ') for name in stdout.decode('utf-8').splitlines())))
+    folders_with_branches = list(filter(lambda x: len(x) == 2, (name.strip().split(' ') for name in stdout.decode('utf-8').splitlines())))
 
     selection = None
     if args.b:

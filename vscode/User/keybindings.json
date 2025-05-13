@@ -111,6 +111,30 @@
         "when": "terminalFocus"
     },
     {
+        "key": "cmd+l",
+        "command": "-aichat.newchataction"
+    },
+    {
+        "key": "cmd+l",
+        "command": "expandLineSelection",
+        "when": "textInputFocus"
+    },
+    {
+        "key": "cmd+; cmd+l",
+        "command": "aipopup.action.modal.generate",
+        "when": "editorFocus && !composerBarIsVisible"
+    },
+    {
+        "key": "cmd+; cmd+k",
+        "command": "aichat.newchataction",
+        "when": "editorFocus && !composerBarIsVisible"
+    },
+    {
+        "key": "cmd+; cmd+k",
+        "command": "aichat.close-sidebar",
+        "when": "!editorFocus",
+    },
+    {
         "key": "shift+cmd+r",
         "command": "editor.action.rename",
         "when": "editorHasRenameProvider && editorTextFocus && !editorReadonly"

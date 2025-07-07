@@ -24,13 +24,13 @@ class Stopwatch:
 if __name__ == '__main__':
     argparser = argparse.ArgumentParser()
     argparser.add_argument('-b', help='git branch pattern')
-    argparser.add_argument('-i', action='store_true', help='Interactive mode')
+    argparser.add_argument('-i', action='store_true', help='Continue interactive mode after running command')
     argparser.add_argument('cmd', nargs='*', default=None, help='Command to run')
     args = argparser.parse_args()
 
     get_folders_cmd = """
         ssh aws-dev 'bash -c "for f in ClickHouse* clickhouse-*; do
-            [ -d \\"\\$f\\" ] || continue;
+            [ -d \\"\\$f\\" ] && [ -d \\"\\$f/.git\\" ] || continue;
             echo -n \\"\\$f \\";
             git -C \\"\\$f\\" rev-parse --abbrev-ref HEAD;
         done"'

@@ -1,4 +1,3 @@
-B
 // Zed settings
 //
 // For information on how to configure Zed, see the Zed
@@ -17,7 +16,7 @@ B
     "enabled_in_text_threads": false
   },
   "features": {
-    "edit_prediction_provider": "copilot",
+    "edit_prediction_provider": "copilot"
   },
   "project_panel": {
     "hide_gitignore": true
@@ -27,14 +26,10 @@ B
       "host": "aws-dev",
       "projects": [
         {
-          "paths": [
-            "~/ClickHouse3/src"
-          ]
+          "paths": ["~/ClickHouse3/src"]
         },
         {
-          "paths": [
-            "~/src/c-clang-wasm"
-          ]
+          "paths": ["~/src/c-clang-wasm"]
         }
       ]
     }
@@ -47,10 +42,9 @@ B
     "dock": "right",
     "default_model": {
       "provider": "copilot_chat",
-      "model": "claude-3-7-sonnet"
-      "model": "claude-3-5-sonnet"
+      "model": "claude-3.7-sonnet"
     },
-    "version": "2",
+    "version": "2"
   },
   "vim_mode": false,
   "theme": "One Dark",
@@ -80,5 +74,5 @@ B
       "enabled": false,
       "delay_ms": 600
     }
-  },
+  }
 }

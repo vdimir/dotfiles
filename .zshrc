@@ -157,6 +157,7 @@ autoload -U +X bashcompinit && bashcompinit
 # zprof
 
 export TERM=xterm-256color
+export EDITOR=vim
 
 export GOPATH=$HOME/go
 export PATH=$PATH:$GOPATH/bin

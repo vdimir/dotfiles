@@ -15,15 +15,17 @@ import shutil
 
 try:
     from emoji import emojize
-    def pprint(msg, **kwargs):
-        print(emojize(str(msg)), **kwargs)
 except ImportError:
-    def pprint(msg, **kwargs):
-        print(str(msg), **kwargs)
+    def emojize(msg):
+        return msg
 
-CLANG_VERSION = int(os.environ.get('BLD_CLANG_VERSION', 18))
+def pprint(msg, **kwargs):
+    print(emojize(str(msg)), **kwargs)
 
-BUILD_TARGETS = ["clickhouse-server", "clickhouse-client"]
+CLANG_VERSION = int(os.environ.get('BLD_CLANG_VERSION', 19))
+NND_PATH = os.path.expanduser(os.environ.get('BLD_NND_PATH', "~/nnd"))
+
+BUILD_TARGETS = ["clickhouse"]
 BUILD_TARGETS_ALL = [*BUILD_TARGETS, "clickhouse-odbc-bridge", "clickhouse-library-bridge", "unit_tests_dbms"]
 
 SYMLINK_PATH = os.path.expanduser("~/clickhouse")
@@ -33,13 +35,19 @@ BINARY_RELATIVE_PATH = "programs/clickhouse"
 
 assert(BUILD_DIR_PREFIX.endswith('/'))
 
+
+def set_terminal_title(title, use_emoji=False):
+    if use_emoji:
+        title = emojize(title)
+    sys.stdout.write(f"\033]0;{title}\007")
+    sys.stdout.flush()
+
+
 def get_build_args(build_type, sanitizer = None, compiler_flags = None, extra_cmake_options = []):
     cmake_options = [
         f"-DCMAKE_C_COMPILER=`which clang-{CLANG_VERSION}`",
         f"-DCMAKE_CXX_COMPILER=`which clang++-{CLANG_VERSION}`",
-        # f"-DCMAKE_C_COMPILER_LAUNCHER=sccache",
-        # f"-DCMAKE_CXX_COMPILER_LAUNCHER=sccache"
-        # f"-DCOMPILER_CACHE=sccache",
+        f"-DCOMPILER_CACHE=ccache",
         f"-DENABLE_CLICKHOUSE_SELF_EXTRACTING=OFF",
         f"-DCMAKE_BUILD_TYPE={build_type}",
         f"-DENABLE_BENCHMARKS=ON",
@@ -60,8 +68,8 @@ def get_build_args(build_type, sanitizer = None, compiler_flags = None, extra_cm
     return cmake_options
 
 BUILD_TYPE_ARGS = {
-    "release": get_build_args("RelWithDebInfo", compiler_flags="-fno-omit-frame-pointer"),
-    "release_omit": get_build_args("RelWithDebInfo"),
+    "release": get_build_args("RelWithDebInfo"),
+    "release_noomit": get_build_args("RelWithDebInfo", compiler_flags="-fno-omit-frame-pointer"),
     "debug":   get_build_args("Debug"),
     "asan":    get_build_args("RelWithDebInfo", sanitizer="address"),
     "msan":    get_build_args("RelWithDebInfo", sanitizer="memory"),
@@ -87,17 +95,20 @@ class ToggleAction(argparse.Action):
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Build the project")
-    parser.add_argument("path", nargs='*', default=None)
+    parser.add_argument("path", nargs='?', default=Path.cwd())
     parser.add_argument("-n", action="count", default=0)
-    parser.add_argument("--clear", "-c", action="count", default=0)
+    parser.add_argument("--clear", "-c", action="count", default=0, help="Clear logs (-c), and build directory (-cc)")
+    parser.add_argument("--cwd", type=str, default=SERVER_CWD)
+    parser.add_argument("--port", type=int, default=os.environ.get('BLD_RUN_PORT', None))
     parser.add_argument("--force", "-f", action="store_true")
     parser.add_argument("--link", action=ToggleAction, default=False)
     parser.add_argument("--install", action=ToggleAction, default=False)
     parser.add_argument("--cmake", action=ToggleAction, default=None)
-    parser.add_argument("--run", "-r", action=ToggleAction, default=os.environ.get('BLD_RUN', False))
+    parser.add_argument("--run", "-r", nargs='?', const=True)
     parser.add_argument("--nnd", action=ToggleAction, default=None)
     default_bld_type = os.environ.get('BLD_TYPE')
     parser.add_argument("--build", "-b", nargs='+', default=[default_bld_type] if default_bld_type else [])
+    parser.add_argument("-j", type=int, default=0)
     parser.add_argument("--tmux", action=ToggleAction, default=False)
     parser.add_argument("--loop", action=ToggleAction, default=False)
     parser.add_argument("--all-targets", action=ToggleAction, default=False)
@@ -105,6 +116,11 @@ def parse_args():
 
 def get_build_params(path, build_types):
     path = Path(path).resolve()
+
+    if Path.exists(path / ".bld.env") and not build_types:
+        default_args = read_envs_from_file(path / ".bld.env")
+        if 'BLD_TYPE' in default_args:
+            build_types = [build_type_complete(default_args['BLD_TYPE'])]
 
     if not path.is_relative_to(Path.home()):
         raise Exception("Path must be relative to home dir: {}".format(path))
@@ -116,6 +132,8 @@ def get_build_params(path, build_types):
         if build_types:
             if build_types == ['all']:
                 build_types = [p.name for p in path.glob(f'{BUILD_DIR_PREFIX}*')]
+            priority = {build_type: i for i, build_type in enumerate(BUILD_TYPE_ARGS)}
+            build_types.sort(key=lambda x: priority[x])
             return path, build_types
 
         path_to_check_time = 'programs'
@@ -216,7 +234,11 @@ def format_build(source_code_dir : Path, build_type : str):
     return f"{build_type_icon} '{build_suffix}' {git_branch.stdout.strip()} "
 
 
-def build_project(source_code_dir : Path, build_type : str, is_dummy : bool, use_cmake : Optional[bool], targets : list[str]):
+def build_project(source_code_dir : Path, build_type : str, args):
+    is_dummy = args.n > 0
+    use_cmake = args.cmake
+    targets = BUILD_TARGETS_ALL if args.all_targets else BUILD_TARGETS
+
     if not source_code_dir.is_dir():
         raise Exception("Source code dir not found: {}".format(source_code_dir))
     pprint(f"===== {format_build(source_code_dir, build_type)} =====")
@@ -231,7 +253,13 @@ def build_project(source_code_dir : Path, build_type : str, is_dummy : bool, use
                 return False
             cmake_command = " ".join([f"cmake -S {source_code_dir} -B {build_dir}", *BUILD_TYPE_ARGS[build_type]])
             run_cmd(cmake_command)
-        build_command = " ".join(["ninja", "-C", str(build_dir), *targets])
+        ninja_args = []
+        if args.j > 0:
+            ninja_args.append(f"-j{args.j}")
+            if args.j == 1:
+                ninja_args.append("-k1")
+
+        build_command = " ".join(["ninja", "-C", str(build_dir), *ninja_args, *targets])
         run_cmd(build_command)
     except subprocess.CalledProcessError as e:
         pprint(e)
@@ -249,7 +277,14 @@ def build_type_complete(prefix):
     return build_types[0]
 
 
-def main(args):
+def read_pid(path):
+    pid = None
+    with open(path, 'r') as status_file:
+        pid = status_file.readline().strip().removeprefix('PID: ')
+    return pid
+
+
+def main(args, run_iteration=1):
     if args.tmux and os.getenv('TMUX') is None:
         command_args = ' '.join(sys.argv)
         if not args.build:
@@ -262,29 +297,57 @@ def main(args):
     if args.build and args.build != ['all']:
         args.build = [build_type_complete(prefix) for prefix in args.build]
 
-    build_infos = defaultdict(list)
-    for path in args.path or [Path.cwd()]:
-        key, value = get_build_params(path, args.build)
-        build_infos[key].extend(value)
-    build_infos = {k: list(dict.fromkeys(v)) for k, v in build_infos.items()}
-    if not build_infos:
-        pprint("No binary found")
-        return
+    if not args.build and isinstance(args.run, str):
+        args.build = [build_type_complete(args.run)]
 
-    print('Build projects:')
-    for src_dir, build_types in build_infos.items():
-        pprint(f"{src_dir}: {build_types}")
-        preload_cmake = Path(src_dir) / 'PreLoad.cmake'
-        if preload_cmake.is_file():
-            execute_command(f"""sed -i 's/message(FATAL_ERROR "$/message( "/g' {preload_cmake}""", silent=True)
+    build_path, build_info = get_build_params(args.path, args.build)
+    if not build_info:
+        pprint(":no_entry: No binary found")
+        sys.exit(1)
+
+    if args.run and len(build_info) > 1:
+        pprint(f":no_entry: Can't run multiple binaries: {build_info}")
+        sys.exit(1)
+
+    if args.run and len(build_info) == 1:
+        env_file_path = Path(args.path) / ".bld.env"
+        if Path.exists(env_file_path):
+            with open('.bld.env', 'w') as env_file:
+                env_file.write(f"BLD_TYPE={build_info[0]}\n")
+
+    pprint(f"{build_path}: {build_info}")
+    preload_cmake = Path(build_path) / 'PreLoad.cmake'
+    if preload_cmake.is_file():
+        execute_command(f"""sed -i 's/message(FATAL_ERROR "$/message( "/g' {preload_cmake}""", silent=True)
     print()
 
-    for src_dir, build_types in build_infos.items():
-        for build_type in build_types:
-            is_ok = build_project(src_dir, build_type, args.n > 0, args.cmake, BUILD_TARGETS_ALL if args.all_targets else BUILD_TARGETS)
-            if not is_ok:
-                pprint(f":warning: {format_build(src_dir, build_type)} failed")
-                del build_infos[src_dir][build_types.index(build_type)]
+    server_cwd = Path(args.cwd).resolve()
+    if Path.is_file(server_cwd / 'status'):
+        pid = read_pid(server_cwd / 'status')
+        is_old_server_running = False
+        if pid and args.force:
+            try:
+                os.kill(int(pid), 0)
+                is_old_server_running = True
+            except ProcessLookupError:
+                pass
+
+        if is_old_server_running:
+            try:
+                pprint(f":warning: Killing the server running with pid {pid}...")
+                os.kill(int(pid), 9)
+            except OSError as err:
+                print(err)
+
+    for i, build_type in enumerate(build_info, 1):
+        build_info_str = format_build(build_path, build_type)
+        set_terminal_title(f"[{i}/{len(build_info)}] {build_info_str}", use_emoji=True)
+        is_ok = build_project(build_path, build_type, args)
+        if not is_ok:
+            pprint(f":warning: {build_info_str} failed")
+            del build_info[build_info.index(build_type)]
+
+    set_terminal_title(f"bld done!")
 
     if args.tmux:
         print("Press Enter to close the tmux window...")
@@ -295,7 +358,8 @@ def main(args):
     if not args.link and not args.run and not args.install:
         return
 
-    build_paths = [s / f'{BUILD_DIR_PREFIX}{t}' for s, ts in build_infos.items() for t in ts]
+    build_paths = [build_path / f'{BUILD_DIR_PREFIX}{t}' for t in build_info]
+    print("build_paths" , build_paths)
     if len(build_paths) == 0:
         pprint("No binary found")
         return
@@ -319,55 +383,45 @@ def main(args):
             force_symlink(binary_path, SYMLINK_PATH)
 
     if args.run or args.loop:
-        cwd = Path(SERVER_CWD).resolve()
-        cwd.mkdir(parents=True, exist_ok=True)
+        server_cwd.mkdir(parents=True, exist_ok=True)
         if args.clear > 1:
             # remove all files in cwd
-            for path in cwd.iterdir():
+            for path in server_cwd.iterdir():
                 if path.is_file():
                     path.unlink()
                 elif path.is_dir():
                     shutil.rmtree(path)
         elif args.clear > 0:
-            log_file_path = cwd / 'log.txt'
+            log_file_path = server_cwd / 'log.txt'
             log_file_path.unlink(missing_ok=True)
 
-        def read_pid(path):
-            pid = None
-            with open(path, 'r') as status_file:
-                pid = status_file.readline().strip().removeprefix('PID: ')
-            return pid
-
-        if Path.is_file(cwd / 'status'):
-            pid = read_pid(cwd / 'status')
-            if pid and args.force:
-                try:
-                    print(f":warning: Killing the server running with pid {pid}...")
-                    os.kill(int(pid), 9)
-                except OSError as err:
-                    print(err)
-
-
         src_dir = build_path.parent.parent
-        port = os.environ.get('BLD_RUN_PORT', None)
 
         envs_to_run = read_envs_from_file(Path.home() / '.aws.cred')
+        envs_to_run["CLICKHOUSE_WATCHDOG_ENABLE"] = "0"
+        envs_to_run["HOME"] = str(Path.home())
+
+
+        if args.nnd:
+            binary_path = f"{NND_PATH} -d {src_dir} {binary_path}"
 
         try:
-            if port:
-                execute_command(f"{binary_path} server -L log.txt --config {src_dir}/programs/server/config.xml -- --tcp_port {port}", cwd=cwd, env=envs_to_run, dummy=args.n > 1)
+            if args.port:
+                execute_command(f"{binary_path} server -L log.txt --config {src_dir}/programs/server/config.xml -- --tcp_port {args.port}", cwd=server_cwd, env=envs_to_run, dummy=args.n > 1)
             else:
-                execute_command(f"{binary_path} server -L log.txt --config {src_dir}/programs/server/config.xml", cwd=cwd, env=envs_to_run, dummy=args.n > 1)
+                execute_command(f"{binary_path} server -L log.txt --config {src_dir}/programs/server/config.xml", cwd=server_cwd, env=envs_to_run, dummy=args.n > 1)
         except KeyboardInterrupt:
             try:
                 icon = 'counterclockwise_arrows_button' if args.loop else 'warning'
                 pprint(f'\n:{icon}:Terminating server')
                 time.sleep(3)
-                if args.loop:
-                    return main(args)
             except KeyboardInterrupt:
-                pass
+                return
             pprint('\n:stop_sign:Terminated')
+
+        if args.loop:
+            pprint(f'===== :counterclockwise_arrows_button: {run_iteration} =====')
+            return main(args, run_iteration + 1)
 
 
 if __name__ == "__main__":

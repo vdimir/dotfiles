@@ -19,7 +19,7 @@
     "edit_prediction_provider": "copilot"
   },
   "project_panel": {
-    "hide_gitignore": true
+    "hide_gitignore": false
   },
   "ssh_connections": [
     {
@@ -38,13 +38,13 @@
     "dock": "right"
   },
   "agent": {
+    "always_allow_tool_actions": true,
     "default_profile": "ask",
     "dock": "right",
     "default_model": {
       "provider": "copilot_chat",
       "model": "claude-3.7-sonnet"
-    },
-    "version": "2"
+    }
   },
   "vim_mode": false,
   "theme": "One Dark",

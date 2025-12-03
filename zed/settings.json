@@ -43,8 +43,8 @@
     "dock": "right",
     "default_model": {
       "provider": "copilot_chat",
-      "model": "claude-3.7-sonnet"
-    }
+      "model": "gpt-5"
+    },
   },
   "vim_mode": false,
   "theme": "One Dark",

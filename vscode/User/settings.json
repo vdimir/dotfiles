@@ -321,5 +321,11 @@
     ],
     "clock.datetimeFormat": "HH:mm",
     "clock.timezone": "Europe/Amsterdam",
+    "github.copilot.nextEditSuggestions.enabled": true,
+    "workbench.secondarySideBar.defaultVisibility": "hidden",
+    "terminal.integrated.stickyScroll.enabled": false,
+    "cmake.showConfigureWithDebuggerNotification": false,
+    "claudeCode.preferredLocation": "panel",
+    "claudeCode.selectedModel": "opus",
 }
 

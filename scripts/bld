@@ -22,7 +22,7 @@ except ImportError:
 def pprint(msg, **kwargs):
     print(emojize(str(msg)), **kwargs)
 
-CLANG_VERSION = int(os.environ.get('BLD_CLANG_VERSION', 19))
+CLANG_VERSION = int(os.environ.get('BLD_CLANG_VERSION', 20))
 NND_PATH = os.path.expanduser(os.environ.get('BLD_NND_PATH', "~/nnd"))
 
 BUILD_TARGETS = ["clickhouse"]
@@ -54,6 +54,7 @@ def get_build_args(build_type, sanitizer = None, compiler_flags = None, extra_cm
         f"-DENABLE_TESTS=ON",
         f"-DENABLE_EXAMPLES=ON",
         f"-DENABLE_RUST=ON",
+        f"-DCHECK_LARGE_OBJECT_SIZES=0",
     ]
 
     if sanitizer is not None:
@@ -95,7 +96,7 @@ class ToggleAction(argparse.Action):
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Build the project")
-    parser.add_argument("path", nargs='?', default=Path.cwd())
+    parser.add_argument("-C", type=Path, default=Path.cwd(), dest="path", help="Path to the source code (default: current dir)")
     parser.add_argument("-n", action="count", default=0)
     parser.add_argument("--clear", "-c", action="count", default=0, help="Clear logs (-c), and build directory (-cc)")
     parser.add_argument("--cwd", type=str, default=SERVER_CWD)
@@ -202,6 +203,8 @@ def read_envs_from_file(cred_env_path):
         return envs
     with open(cred_env_path, 'r') as cred_env_file:
         for line in cred_env_file.readlines():
+            if line.startswith('#') or line.strip() == '':
+                continue
             key, value = line.removeprefix('export ').strip().split('=', 1)
             envs[key] = value
     return envs
@@ -220,6 +223,7 @@ def format_build(source_code_dir : Path, build_type : str):
     build_type_icon = {
         "debug":   ":artist_palette:",
         "release": ":rocket:",
+        "release_noomit": ":rocket:",
         "reldeb":  ":rocket:",
         "asan":    ":house:",
         "msan":    ":thread:",
@@ -340,8 +344,9 @@ def main(args, run_iteration=1):
                 print(err)
 
     for i, build_type in enumerate(build_info, 1):
+        build_no_str = f"[{i}/{len(build_info)}]" if len(build_info) > 1 else ""
         build_info_str = format_build(build_path, build_type)
-        set_terminal_title(f"[{i}/{len(build_info)}] {build_info_str}", use_emoji=True)
+        set_terminal_title(f"{build_no_str} {build_info_str}", use_emoji=True)
         is_ok = build_project(build_path, build_type, args)
         if not is_ok:
             pprint(f":warning: {build_info_str} failed")
@@ -405,11 +410,12 @@ def main(args, run_iteration=1):
         if args.nnd:
             binary_path = f"{NND_PATH} -d {src_dir} {binary_path}"
 
+        extra_config_args = ['--logger.console=0']
+        if args.port:
+            extra_config_args.append(f'--tcp_port={args.port}')
+
         try:
-            if args.port:
-                execute_command(f"{binary_path} server -L log.txt --config {src_dir}/programs/server/config.xml -- --tcp_port {args.port}", cwd=server_cwd, env=envs_to_run, dummy=args.n > 1)
-            else:
-                execute_command(f"{binary_path} server -L log.txt --config {src_dir}/programs/server/config.xml", cwd=server_cwd, env=envs_to_run, dummy=args.n > 1)
+            execute_command(f"{binary_path} server -L log.txt --config {src_dir}/programs/server/config.xml -- {' '.join(extra_config_args)}", cwd=server_cwd, env=envs_to_run, dummy=args.n > 1)
         except KeyboardInterrupt:
             try:
                 icon = 'counterclockwise_arrows_button' if args.loop else 'warning'
@@ -420,7 +426,11 @@ def main(args, run_iteration=1):
             pprint('\n:stop_sign:Terminated')
 
         if args.loop:
-            pprint(f'===== :counterclockwise_arrows_button: {run_iteration} =====')
+            try:
+                pprint(f'===== :counterclockwise_arrows_button: {run_iteration} (press C-c to interrupt) =====')
+                time.sleep(1)
+            except KeyboardInterrupt:
+                return
             return main(args, run_iteration + 1)
 
 

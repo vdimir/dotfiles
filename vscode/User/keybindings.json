@@ -635,5 +635,14 @@
         "key": "cmd+; cmd+o",
         "command": "-testing.showMostRecentOutput",
         "when": "testing.hasAnyResults"
+    },
+    {
+        "key": "cmd+; cmd+r",
+        "command": "-testing.refreshTests",
+        "when": "testing.canRefresh"
+    },
+    {
+        "key": "cmd+; cmd+r",
+        "command": "workbench.action.files.toggleActiveEditorReadonlyInSession"
     }
 ]

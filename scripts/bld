@@ -22,11 +22,10 @@ except ImportError:
 def pprint(msg, **kwargs):
     print(emojize(str(msg)), **kwargs)
 
-CLANG_VERSION = int(os.environ.get('BLD_CLANG_VERSION', 20))
+CLANG_VERSION = int(os.environ.get('BLD_CLANG_VERSION', 21))
 NND_PATH = os.path.expanduser(os.environ.get('BLD_NND_PATH', "~/nnd"))
 
 BUILD_TARGETS = ["clickhouse"]
-BUILD_TARGETS_ALL = [*BUILD_TARGETS, "clickhouse-odbc-bridge", "clickhouse-library-bridge", "unit_tests_dbms"]
 
 SYMLINK_PATH = os.path.expanduser("~/clickhouse")
 SERVER_CWD = os.path.expanduser(os.environ.get('BLD_SERVER_CWD', "~/_tmp"))
@@ -69,8 +68,9 @@ def get_build_args(build_type, sanitizer = None, compiler_flags = None, extra_cm
     return cmake_options
 
 BUILD_TYPE_ARGS = {
-    "release": get_build_args("RelWithDebInfo"),
+    "release": get_build_args("RelWithDebInfo", compiler_flags="-fno-omit-frame-pointer"),
     "release_noomit": get_build_args("RelWithDebInfo", compiler_flags="-fno-omit-frame-pointer"),
+    "omitfp_release": get_build_args("RelWithDebInfo"),
     "debug":   get_build_args("Debug"),
     "asan":    get_build_args("RelWithDebInfo", sanitizer="address"),
     "msan":    get_build_args("RelWithDebInfo", sanitizer="memory"),
@@ -96,22 +96,22 @@ class ToggleAction(argparse.Action):
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Build the project")
-    parser.add_argument("-C", type=Path, default=Path.cwd(), dest="path", help="Path to the source code (default: current dir)")
-    parser.add_argument("-n", action="count", default=0)
-    parser.add_argument("--clear", "-c", action="count", default=0, help="Clear logs (-c), and build directory (-cc)")
-    parser.add_argument("--cwd", type=str, default=SERVER_CWD)
-    parser.add_argument("--port", type=int, default=os.environ.get('BLD_RUN_PORT', None))
-    parser.add_argument("--force", "-f", action="store_true")
-    parser.add_argument("--link", action=ToggleAction, default=False)
-    parser.add_argument("--install", action=ToggleAction, default=False)
-    parser.add_argument("--cmake", action=ToggleAction, default=None)
-    parser.add_argument("--run", "-r", nargs='?', const=True)
-    parser.add_argument("--nnd", action=ToggleAction, default=None)
+    parser.add_argument("-C", type=Path, default=Path.cwd(), dest="path", help="path to the source code (default: current dir)")
+    parser.add_argument("-n", action="count", default=0, help="do not perform actual build, only print the commands, do not run if specified twice")
+    parser.add_argument("--clear", "-c", action="count", default=0, help="clear logs (-c), and build directory (-cc)")
+    parser.add_argument("--cwd", type=str, default=SERVER_CWD, help=argparse.SUPPRESS)
+    parser.add_argument("--port", type=int, default=os.environ.get('BLD_RUN_PORT', None), help="port to run the server")
+    parser.add_argument("--force", "-f", action="store_true", help="kill server if another instance is running")
+    parser.add_argument("--link", action=ToggleAction, default=False, help=argparse.SUPPRESS)
+    parser.add_argument("--install", action=ToggleAction, default=False, help=argparse.SUPPRESS)
+    parser.add_argument("--cmake", action=ToggleAction, default=None, help="rerun cmake command")
+    parser.add_argument("--run", "-r", nargs='?', const=True, help="run the server after the build. build type can be specified")
+    parser.add_argument("--nnd", action=ToggleAction, default=None, help="use nnd debugger to run the server")
     default_bld_type = os.environ.get('BLD_TYPE')
-    parser.add_argument("--build", "-b", nargs='+', default=[default_bld_type] if default_bld_type else [])
-    parser.add_argument("-j", type=int, default=0)
-    parser.add_argument("--tmux", action=ToggleAction, default=False)
-    parser.add_argument("--loop", action=ToggleAction, default=False)
+    parser.add_argument("--build", "-b", nargs='+', default=[default_bld_type] if default_bld_type else [], help="build types to build")
+    parser.add_argument("-j", type=int, default=0, help="parallel build jobs")
+    parser.add_argument("--tmux", action=ToggleAction, default=False, help="run the build and run process in a tmux session")
+    parser.add_argument("--loop", action=ToggleAction, default=False, help="repeat the build and run process after the server is terminated")
     parser.add_argument("--all-targets", action=ToggleAction, default=False)
     return parser.parse_args()
 
@@ -241,7 +241,7 @@ def format_build(source_code_dir : Path, build_type : str):
 def build_project(source_code_dir : Path, build_type : str, args):
     is_dummy = args.n > 0
     use_cmake = args.cmake
-    targets = BUILD_TARGETS_ALL if args.all_targets else BUILD_TARGETS
+    targets = [] if args.all_targets else BUILD_TARGETS
 
     if not source_code_dir.is_dir():
         raise Exception("Source code dir not found: {}".format(source_code_dir))

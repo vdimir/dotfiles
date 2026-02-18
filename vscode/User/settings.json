@@ -301,7 +301,7 @@
     "gitlens.hovers.enabled": false,
     "editor.hover.sticky": false,
     "editor.hover.hidingDelay": 0,
-    "editor.hover.enabled": false,
+    "editor.hover.enabled": "off",
     "task.autoDetect": "off",
     "VsCodeTaskButtons.showCounter": false,
     "VsCodeTaskButtons.tasks": [
@@ -327,5 +327,6 @@
     "cmake.showConfigureWithDebuggerNotification": false,
     "claudeCode.preferredLocation": "panel",
     "claudeCode.selectedModel": "opus",
+    "go.toolsManagement.autoUpdate": true,
 }
 

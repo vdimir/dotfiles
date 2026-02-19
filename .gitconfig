@@ -27,6 +27,8 @@
     program = gpg
 [merge]
     ff = false
+[include]
+    path = ~/.gitconfig.user
 [rebase]
     autoStash = true
 [init]

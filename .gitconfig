@@ -24,13 +24,12 @@
     gpgsign = true
 [gpg]
     format = ssh
+    program = gpg
 [merge]
     ff = false
 [rebase]
     autoStash = true
 [init]
     defaultBranch = main
-[include]
-    path = ~/.gitconfig.user
-[credential]
-	helper = store
+[branch]
+    sort = -committerdate

@@ -227,7 +227,8 @@
     "gitlens.statusBar.format": "${agoOrDate}${' via 'pullRequest}",
     "github.gitProtocol": "ssh",
     "remote.SSH.remotePlatform": {
-        "aws-dev": "linux"
+        "aws-dev": "linux",
+        "vdimir-dev": "linux",
     },
     "editor.fontSize": 14,
     "terminal.integrated.fontSize": 13,

@@ -188,9 +188,6 @@
     "terminal.integrated.letterSpacing": 1,
     "terminal.integrated.tabs.enableAnimation": false,
     "terminal.integrated.wordSeparators": " ()[]{}',\"`─‘’~/.-_$!:",
-    "[python]": {
-        "editor.defaultFormatter": "ms-python.python"
-    },
     "terminal.integrated.cursorWidth": 2,
     "githubPullRequests.pullBranch": "never",
     "githubPullRequests.queries": [

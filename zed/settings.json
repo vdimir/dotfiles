@@ -8,15 +8,13 @@
 // from the command palette or from `Zed` application menu.
 {
   "edit_predictions": {
+    "provider": "copilot",
     "mode": "eager",
     "copilot": {
       "proxy": null,
       "proxy_no_verify": null
     },
     "enabled_in_text_threads": false
-  },
-  "features": {
-    "edit_prediction_provider": "copilot"
   },
   "project_panel": {
     "hide_gitignore": false
@@ -38,11 +36,13 @@
     "dock": "right"
   },
   "agent": {
+    "tool_permissions": {
+      "default": "allow"
+    },
     "inline_assistant_model": {
       "provider": "copilot_chat",
       "model": "gpt-5.2"
     },
-    "always_allow_tool_actions": true,
     "default_profile": "ask",
     "dock": "right",
     "default_model": {

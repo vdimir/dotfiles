@@ -27,8 +27,9 @@ export PATH="/usr/local/opt/findutils/libexec/gnubin:$PATH"
 
 alias ssh="TERM='xterm-256color' ssh"
 
-export DEVSERV=aws-dev
+export DEVSERV=vdimir-dev
 
 PROMPT_SUPPRESS_HOST=1
 export GPG_TTY=$(tty)
 
+export SSH_AUTH_SOCK=~/Library/Group\ Containers/2BUA8C4S2C.com.1password/t/agent.sock

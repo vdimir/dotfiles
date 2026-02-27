@@ -26,10 +26,12 @@ if __name__ == '__main__':
     argparser.add_argument('-b', help='git branch pattern')
     argparser.add_argument('-i', action='store_true', help='Continue interactive mode after running command')
     argparser.add_argument('cmd', nargs='*', default=None, help='Command to run')
+    argparser.add_argument('--host', default=os.getenv('SSH_DEV_HOST', ''), help='SSH host to connect to')
     args = argparser.parse_args()
 
-    get_folders_cmd = """
-        ssh aws-dev 'bash -c "for f in ClickHouse* clickhouse-*; do
+    hostname = args.host
+    get_folders_cmd = f"""
+        ssh {hostname} 'bash -c "for f in ClickHouse* clickhouse-*; do
             [ -d \\"\\$f\\" ] && [ -d \\"\\$f/.git\\" ] || continue;
             echo -n \\"\\$f \\";
             git -C \\"\\$f\\" rev-parse --abbrev-ref HEAD;
@@ -60,7 +62,7 @@ if __name__ == '__main__':
 
     if selection is None:
         selection = questionary.select(
-            "SSH into:",
+            f"SSH into @{hostname}:",
             choices=[questionary.Choice(f"{name} @ {branch}", i) for i, (name, branch) in enumerate(folders_with_branches)],
             pointer='▸',
             use_shortcuts=True,
@@ -77,7 +79,7 @@ if __name__ == '__main__':
         command = ' '.join(args.cmd)
         print(f"SSHing into {folder} @ '{branch}' and running '{command}'...")
         rest = 'fish -l' if args.i else ''
-        subprocess.run(f"ssh -t aws-dev 'cd {folder}; {command}; {rest}'", shell=True)
+        subprocess.run(f"ssh -t {hostname} 'cd {folder}; {command}; {rest}'", shell=True)
     else:
         print(f"SSHing into {folder}...")
-        subprocess.run(f"ssh -t aws-dev 'cd {folder}; fish -l' ", shell=True)
+        subprocess.run(f"ssh -t {hostname} 'cd {folder}; fish -l' ", shell=True)

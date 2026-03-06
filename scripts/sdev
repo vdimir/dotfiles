@@ -10,6 +10,7 @@ import re
 import subprocess
 import argparse
 import time
+import uuid
 from fnmatch import fnmatch
 
 import questionary
@@ -37,33 +38,56 @@ if __name__ == '__main__':
             git -C \\"\\$f\\" rev-parse --abbrev-ref HEAD;
         done"'
     """.strip()
-    process = subprocess.Popen(get_folders_cmd, shell=True, stdout=subprocess.PIPE)
+
+    get_sessions_cmd = f"ssh {hostname} 'zmx list 2>/dev/null'"
+
+    folders_proc = subprocess.Popen(get_folders_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    sessions_proc = subprocess.Popen(get_sessions_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
     sw = Stopwatch()
-    while process.poll() is None:
+    while folders_proc.poll() is None:
         time.sleep(0.1)
         print(f'\r{sw.elapsed():.02f}s', end='', flush=True)
     print()
-    stdout, _ = process.communicate()
-    if process.returncode != 0:
-        print(stdout)
+
+    folders_stdout, _ = folders_proc.communicate()
+    sessions_stdout, _ = sessions_proc.communicate()
+
+    if folders_proc.returncode != 0:
+        print(folders_stdout.decode('utf-8'))
         sys.exit(1)
 
-    folders_with_branches = list(filter(lambda x: len(x) == 2, (name.strip().split(' ') for name in stdout.decode('utf-8').splitlines())))
+    folders_with_branches = list(filter(lambda x: len(x) == 2, (name.strip().split(' ') for name in folders_stdout.decode('utf-8').splitlines())))
+    def parse_zmx_session(line):
+        fields = dict(f.split('=', 1) for f in line.strip().split('\t') if '=' in f)
+        return fields
 
-    selection = None
+    zmx_sessions = [s for s in (parse_zmx_session(line) for line in sessions_stdout.decode('utf-8').splitlines() if line.strip()) if s.get('session_name')]
+
     if args.b:
         folders_with_branches = list(filter(lambda x: fnmatch(x[1], f"*{args.b}*"), folders_with_branches))
-        if len(folders_with_branches) == 1:
-            selection = 0
 
-    if not folders_with_branches:
-        print('No ClickHouse folders found')
+    if not folders_with_branches and not zmx_sessions:
+        print('No ClickHouse folders or zmx sessions found')
         sys.exit(1)
 
+    selection = None
+    if args.b and len(folders_with_branches) == 1 and not zmx_sessions:
+        selection = ('folder', 0)
+
     if selection is None:
-        selection = questionary.select(
+        choices = []
+        for session in zmx_sessions:
+            name = session.get('session_name', '?')
+            cmd = session.get('cmd', '')
+            label = f"[zmx] {name}  ({cmd})" if cmd else f"[zmx] {name}"
+            choices.append(questionary.Choice(label, ('session', name)))
+        for i, (name, branch) in enumerate(folders_with_branches):
+            choices.append(questionary.Choice(f"{name} @ {branch}", ('folder', i)))
+
+        result = questionary.select(
             f"SSH into @{hostname}:",
-            choices=[questionary.Choice(f"{name} @ {branch}", i) for i, (name, branch) in enumerate(folders_with_branches)],
+            choices=choices,
             pointer='▸',
             use_shortcuts=True,
             style=questionary.Style([
@@ -71,15 +95,27 @@ if __name__ == '__main__':
                 ("text", "fg:#aaaaaa"),
             ])
         ).ask()
-    if selection is None:
-        sys.exit(1)
+        if result is None:
+            sys.exit(1)
+        selection = result
 
-    folder, branch = folders_with_branches[selection]
-    if args.cmd:
-        command = ' '.join(args.cmd)
-        print(f"SSHing into {folder} @ '{branch}' and running '{command}'...")
-        rest = 'fish -l' if args.i else ''
-        subprocess.run(f"ssh -t {hostname} 'cd {folder}; {command}; {rest}'", shell=True)
+    kind, value = selection
+
+    if kind == 'session':
+        print(f"Attaching to zmx session '{value}'...")
+        subprocess.run(f"ssh -t {hostname} 'zmx attach {value}'", shell=True)
     else:
-        print(f"SSHing into {folder}...")
-        subprocess.run(f"ssh -t {hostname} 'cd {folder}; fish -l' ", shell=True)
+        folder, branch = folders_with_branches[value]
+        folder_safe = re.sub(r'[^a-z0-9]', '-', folder.lower())
+        session_name = f"{folder_safe[:24]}-{uuid.uuid4().hex[:6]}"
+
+        if args.cmd:
+            command = ' '.join(args.cmd)
+            print(f"SSHing into {folder} @ '{branch}' via zmx '{session_name}' running '{command}'...")
+            if args.i:
+                subprocess.run(f"ssh -t {hostname} 'zmx attach {session_name} fish -C \"cd {folder}; {command}\"'", shell=True)
+            else:
+                subprocess.run(f"ssh -t {hostname} 'zmx attach {session_name} bash -c \"cd {folder} && {command}\"'", shell=True)
+        else:
+            print(f"SSHing into {folder} @ '{branch}' via zmx '{session_name}'...")
+            subprocess.run(f"ssh -t {hostname} 'zmx attach {session_name} fish -C \"cd {folder}\"'", shell=True)

@@ -108,9 +108,13 @@ def parse_args():
     parser.add_argument("--run", "-r", nargs='?', const=True, help="run the server after the build. build type can be specified")
     parser.add_argument("--nnd", action=ToggleAction, default=None, help="use nnd debugger to run the server")
     default_bld_type = os.environ.get('BLD_TYPE')
-    parser.add_argument("--build", "-b", nargs='+', default=[default_bld_type] if default_bld_type else [], help="build types to build")
+    parser.add_argument("--build", "-b", nargs='+', default=[default_bld_type] if default_bld_type else [],
+        help=f"build types to build, possible values: {', '.join(BUILD_TYPE_ARGS.keys())}, can be specified as a prefix, or 'all' to build all types")
     parser.add_argument("-j", type=int, default=0, help="parallel build jobs")
     parser.add_argument("--tmux", action=ToggleAction, default=False, help="run the build and run process in a tmux session")
+    parser.add_argument("--zmx", type=str, const='clickhouse_build', nargs='?', help="use zmx as a terminal multiplexer with the specified session name")
+    parser.add_argument("--background", "-d", action=ToggleAction, default=False, help="run the server in the background (only with --run)")
+    parser.add_argument("--build-log", type=str, default=None, help="path to the build log file")
     parser.add_argument("--loop", action=ToggleAction, default=False, help="repeat the build and run process after the server is terminated")
     parser.add_argument("--all-targets", action=ToggleAction, default=False)
     return parser.parse_args()
@@ -210,13 +214,21 @@ def read_envs_from_file(cred_env_path):
     return envs
 
 
-def execute_command(command, dummy=False, silent=False, **kwargs):
+def execute_command(command, dummy=False, silent=False, log_file=None, **kwargs):
     if dummy:
         pprint(':spiral_shell: will run {}'.format(command))
         return
     if not silent:
         pprint(':spiral_shell: {}'.format(command))
-    subprocess.run(command, shell=True, check=True, **kwargs)
+
+    if 'check' not in kwargs:
+        kwargs['check'] = True
+
+    if log_file is None or log_file == '':
+        subprocess.run(command, shell=True, **kwargs)
+    else:
+        with open(log_file, 'wb') as f:
+            subprocess.run(command, shell=True, stdout=f, stderr=subprocess.STDOUT, **kwargs)
 
 
 def format_build(source_code_dir : Path, build_type : str):
@@ -248,7 +260,7 @@ def build_project(source_code_dir : Path, build_type : str, args):
     pprint(f"===== {format_build(source_code_dir, build_type)} =====")
 
     build_dir = source_code_dir / f'{BUILD_DIR_PREFIX}{build_type}'
-    run_cmd = partial(execute_command, dummy=is_dummy)
+    run_cmd = partial(execute_command, dummy=is_dummy, log_file=args.build_log)
     try:
         is_cmake_initialized = Path.is_file(build_dir / 'CMakeCache.txt')
         if use_cmake or not is_cmake_initialized:
@@ -289,12 +301,40 @@ def read_pid(path):
 
 
 def main(args, run_iteration=1):
+    server_cwd = Path(args.cwd).resolve()
+    if Path.is_file(server_cwd / 'status'):
+        pid = read_pid(server_cwd / 'status')
+        is_old_server_running = False
+        if pid and args.force:
+            try:
+                os.kill(int(pid), 0)
+                is_old_server_running = True
+            except ProcessLookupError:
+                pass
+
+        if is_old_server_running:
+            try:
+                pprint(f":warning: Killing the server running with pid {pid}...")
+                os.kill(int(pid), 9)
+            except OSError as err:
+                print(err)
+
     if args.tmux and os.getenv('TMUX') is None:
         command_args = ' '.join(sys.argv)
         if not args.build:
             command_args += ' --build all'
         command = f'tmux new-session "{command_args}"'
         print(f'Run in tmux: \'{command}\'')
+        subprocess.run(command, shell=True, check=True)
+        sys.exit(0)
+
+    use_zmx = args.zmx is not None and args.zmx != '' and os.getenv('ZMX_SESSION') is None
+    if use_zmx:
+        if args.force:
+            execute_command(f"zmx kill {args.zmx}", check=False)
+        command_args = ' '.join(sys.argv)
+        command = f'zmx attach {args.zmx} {command_args}'
+        print(f'Run in zmx: \'{command}\'')
         subprocess.run(command, shell=True, check=True)
         sys.exit(0)
 
@@ -324,24 +364,6 @@ def main(args, run_iteration=1):
     if preload_cmake.is_file():
         execute_command(f"""sed -i 's/message(FATAL_ERROR "$/message( "/g' {preload_cmake}""", silent=True)
     print()
-
-    server_cwd = Path(args.cwd).resolve()
-    if Path.is_file(server_cwd / 'status'):
-        pid = read_pid(server_cwd / 'status')
-        is_old_server_running = False
-        if pid and args.force:
-            try:
-                os.kill(int(pid), 0)
-                is_old_server_running = True
-            except ProcessLookupError:
-                pass
-
-        if is_old_server_running:
-            try:
-                pprint(f":warning: Killing the server running with pid {pid}...")
-                os.kill(int(pid), 9)
-            except OSError as err:
-                print(err)
 
     for i, build_type in enumerate(build_info, 1):
         build_no_str = f"[{i}/{len(build_info)}]" if len(build_info) > 1 else ""
@@ -402,10 +424,10 @@ def main(args, run_iteration=1):
 
         src_dir = build_path.parent.parent
 
-        envs_to_run = read_envs_from_file(Path.home() / '.aws.cred')
+        envs_to_run = os.environ.copy()
+        envs_to_run.update(read_envs_from_file(Path.home() / '.aws.cred'))
         envs_to_run["CLICKHOUSE_WATCHDOG_ENABLE"] = "0"
         envs_to_run["HOME"] = str(Path.home())
-
 
         if args.nnd:
             binary_path = f"{NND_PATH} -d {src_dir} {binary_path}"
@@ -414,8 +436,47 @@ def main(args, run_iteration=1):
         if args.port:
             extra_config_args.append(f'--tcp_port={args.port}')
 
+        server_cmd = f"{binary_path} server -L log.txt --config {src_dir}/programs/server/config.xml -- {' '.join(extra_config_args)}"
+
+        if args.background:
+            if args.loop:
+                pprint(":no_entry: --background and --loop are incompatible")
+                sys.exit(1)
+            zmx_session = args.zmx if args.zmx else "ch_server"
+            execute_command(f"zmx kill {zmx_session}", check=False, silent=True)
+            if args.n > 1:
+                pprint(f':spiral_shell: will run (background, zmx:{zmx_session}): {server_cmd}')
+            else:
+                full_cmd = f"cd {server_cwd} && {server_cmd}"
+                execute_command(f"zmx run {zmx_session} '{full_cmd}'", env=envs_to_run)
+                pprint(f':rocket: Server started in zmx session "{zmx_session}"')
+
+                tcp_port = args.port or 9000
+                pprint(f':hourglass_not_done: Waiting for server on port {tcp_port}...', end='', flush=True)
+                timeout = 120
+                start_time = time.time()
+                ready = False
+                while time.time() - start_time < timeout:
+                    try:
+                        result = subprocess.run(f"{binary_path} client --port {tcp_port} --query 'SELECT 1'", shell=True, capture_output=True, timeout=5)
+                        if result.returncode == 0 and result.stdout.strip() == b'1':
+                            ready = True
+                            break
+                    except subprocess.TimeoutExpired:
+                        pass
+                    print('.', end='', flush=True)
+                    time.sleep(0.5)
+                print()
+
+                if ready:
+                    elapsed = time.time() - start_time
+                    pprint(f':white_check_mark: Server is ready (took {elapsed:.1f}s)')
+                else:
+                    pprint(f':warning: Server health check timed out after {timeout}s')
+            return
+
         try:
-            execute_command(f"{binary_path} server -L log.txt --config {src_dir}/programs/server/config.xml -- {' '.join(extra_config_args)}", cwd=server_cwd, env=envs_to_run, dummy=args.n > 1)
+            execute_command(server_cmd, cwd=server_cwd, env=envs_to_run, dummy=args.n > 1)
         except KeyboardInterrupt:
             try:
                 icon = 'counterclockwise_arrows_button' if args.loop else 'warning'

@@ -13,11 +13,26 @@ from typing import Optional
 from pathlib import Path
 import shutil
 
-try:
-    from emoji import emojize
-except ImportError:
-    def emojize(msg):
-        return msg
+_EMOJI_MAP = {
+    ":spiral_shell:": "\U0001F41A",
+    ":stop_sign:": "\U0001F6D1",
+    ":warning:": "\u26A0\uFE0F",
+    ":no_entry:": "\u26D4",
+    ":link:": "\U0001F517",
+    ":artist_palette:": "\U0001F3A8",
+    ":rocket:": "\U0001F680",
+    ":house:": "\U0001F3E0",
+    ":thread:": "\U0001F9F5",
+    ":hourglass_not_done:": "\u23F3",
+    ":white_check_mark:": "\u2705",
+    ":counterclockwise_arrows_button:": "\U0001F504",
+}
+
+import re
+_EMOJI_RE = re.compile(r'(:[a-z_]+:)')
+
+def emojize(msg):
+    return _EMOJI_RE.sub(lambda m: _EMOJI_MAP.get(m.group(1), m.group(1)), msg)
 
 def pprint(msg, **kwargs):
     print(emojize(str(msg)), **kwargs)

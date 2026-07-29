@@ -1,10 +1,16 @@
-#!/usr/bin/env python
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.10"
+# dependencies = []
+# ///
 
 import argparse
 from collections import defaultdict
 import errno
 import os
+import shlex
 import sys
+import uuid
 import select
 import subprocess
 from functools import partial
@@ -42,10 +48,12 @@ NND_PATH = os.path.expanduser(os.environ.get('BLD_NND_PATH', "~/nnd"))
 
 BUILD_TARGETS = ["clickhouse"]
 
-SYMLINK_PATH = os.path.expanduser("~/clickhouse")
+SYMLINK_NAME = "clickhouse"
 SERVER_CWD = os.path.expanduser(os.environ.get('BLD_SERVER_CWD', "~/_tmp"))
 BUILD_DIR_PREFIX = os.environ.get('BLD_DIR_PREFIX', '_build/')
 BINARY_RELATIVE_PATH = "programs/clickhouse"
+DOCKER_IMAGE = os.environ.get('BLD_DOCKER_IMAGE', 'ubuntu:24.04')
+EXTRA_CONFIG_DIR = Path(os.path.expanduser(os.environ.get('BLD_EXTRA_CONFIG_DIR', '~/etc-clickhouse')))
 
 assert(BUILD_DIR_PREFIX.endswith('/'))
 
@@ -58,9 +66,15 @@ def set_terminal_title(title, use_emoji=False):
 
 
 def get_build_args(build_type, sanitizer = None, compiler_flags = None, extra_cmake_options = []):
+    if sys.platform == 'darwin':
+        c_compiler = "$(brew --prefix llvm)/bin/clang"
+        cxx_compiler = "$(brew --prefix llvm)/bin/clang++"
+    else:
+        c_compiler = f"`which clang-{CLANG_VERSION}`"
+        cxx_compiler = f"`which clang++-{CLANG_VERSION}`"
     cmake_options = [
-        f"-DCMAKE_C_COMPILER=`which clang-{CLANG_VERSION}`",
-        f"-DCMAKE_CXX_COMPILER=`which clang++-{CLANG_VERSION}`",
+        f"-DCMAKE_C_COMPILER={c_compiler}",
+        f"-DCMAKE_CXX_COMPILER={cxx_compiler}",
         f"-DCOMPILER_CACHE=ccache",
         f"-DENABLE_CLICKHOUSE_SELF_EXTRACTING=OFF",
         f"-DCMAKE_BUILD_TYPE={build_type}",
@@ -114,9 +128,11 @@ def parse_args():
     parser.add_argument("-C", type=Path, default=Path.cwd(), dest="path", help="path to the source code (default: current dir)")
     parser.add_argument("-n", action="count", default=0, help="do not perform actual build, only print the commands, do not run if specified twice")
     parser.add_argument("--clear", "-c", action="count", default=0, help="clear logs (-c), and build directory (-cc)")
-    parser.add_argument("--cwd", type=str, default=SERVER_CWD, help=argparse.SUPPRESS)
-    parser.add_argument("--port", type=int, default=os.environ.get('BLD_RUN_PORT', None), help="port to run the server")
-    parser.add_argument("--force", "-f", action="store_true", help="kill server if another instance is running")
+    parser.add_argument("--cwd", type=str, default=SERVER_CWD, help="working directory for the server (default: {})".format(SERVER_CWD))
+    parser.add_argument("--port", type=int, default=os.environ.get('CLICKHOUSE_PORT_TCP', None), help="port to run the server")
+    parser.add_argument("--force", "-f", action="count", default=0, help="kill server if another instance is running")
+    parser.add_argument("--docker", nargs='?', const=True, default=None,
+        help="run the server inside a Docker container with per-worktree workdir and ports; optionally pass an image")
     parser.add_argument("--link", action=ToggleAction, default=False, help=argparse.SUPPRESS)
     parser.add_argument("--install", action=ToggleAction, default=False, help=argparse.SUPPRESS)
     parser.add_argument("--cmake", action=ToggleAction, default=None, help="rerun cmake command")
@@ -127,20 +143,16 @@ def parse_args():
         help=f"build types to build, possible values: {', '.join(BUILD_TYPE_ARGS.keys())}, can be specified as a prefix, or 'all' to build all types")
     parser.add_argument("-j", type=int, default=0, help="parallel build jobs")
     parser.add_argument("--tmux", action=ToggleAction, default=False, help="run the build and run process in a tmux session")
-    parser.add_argument("--zmx", type=str, const='clickhouse_build', nargs='?', help="use zmx as a terminal multiplexer with the specified session name")
+    parser.add_argument("--session", "--zmx", type=str, const='', nargs='?', dest='session', help="run inside a tmux session with the specified name")
     parser.add_argument("--background", "-d", action=ToggleAction, default=False, help="run the server in the background (only with --run)")
     parser.add_argument("--build-log", type=str, default=None, help="path to the build log file")
     parser.add_argument("--loop", action=ToggleAction, default=False, help="repeat the build and run process after the server is terminated")
     parser.add_argument("--all-targets", action=ToggleAction, default=False)
+
     return parser.parse_args()
 
 def get_build_params(path, build_types):
     path = Path(path).resolve()
-
-    if Path.exists(path / ".bld.env") and not build_types:
-        default_args = read_envs_from_file(path / ".bld.env")
-        if 'BLD_TYPE' in default_args:
-            build_types = [build_type_complete(default_args['BLD_TYPE'])]
 
     if not path.is_relative_to(Path.home()):
         raise Exception("Path must be relative to home dir: {}".format(path))
@@ -229,6 +241,34 @@ def read_envs_from_file(cred_env_path):
     return envs
 
 
+def update_envrc_file(envrc_path : Path, updates : dict):
+    """Update/add `export KEY=VALUE` lines in a direnv-style .envrc, creating the file if missing."""
+    lines = []
+    seen = set()
+    if envrc_path.is_file():
+        with open(envrc_path, 'r') as f:
+            for line in f.readlines():
+                stripped = line.strip()
+                if stripped.startswith('#') or stripped == '':
+                    lines.append(line.rstrip('\n'))
+                    continue
+                body = stripped.removeprefix('export ').strip()
+                if '=' not in body:
+                    lines.append(line.rstrip('\n'))
+                    continue
+                key = body.split('=', 1)[0]
+                if key in updates:
+                    lines.append(f"export {key}={updates[key]}")
+                    seen.add(key)
+                else:
+                    lines.append(line.rstrip('\n'))
+    for key, value in updates.items():
+        if key not in seen:
+            lines.append(f"export {key}={value}")
+    with open(envrc_path, 'w') as f:
+        f.write('\n'.join(lines) + '\n')
+
+
 def execute_command(command, dummy=False, silent=False, log_file=None, **kwargs):
     if dummy:
         pprint(':spiral_shell: will run {}'.format(command))
@@ -246,6 +286,23 @@ def execute_command(command, dummy=False, silent=False, log_file=None, **kwargs)
             subprocess.run(command, shell=True, stdout=f, stderr=subprocess.STDOUT, **kwargs)
 
 
+def get_build_suffix(source_code_dir : Path):
+    return str(source_code_dir.relative_to(Path.home())).removeprefix('ClickHouse').removeprefix('clickhouse')
+
+def get_git_branch(source_code_dir : Path):
+    git_branch = subprocess.run(["git", "symbolic-ref", "--short", "HEAD"], encoding='utf-8', cwd=source_code_dir, capture_output=True, check=False)
+    if (git_branch.returncode != 0):
+        git_branch = subprocess.run(["git", "rev-parse", "--short", "HEAD"], encoding='utf-8', cwd=source_code_dir, capture_output=True, check=True)
+    return git_branch.stdout.strip()
+
+
+def with_pane_banner(command : str, banner_lines : list):
+    # tmux panes running the server are otherwise silent (--logger.console=0),
+    # so print what this run is before handing the pane over to the server.
+    banner = ''.join(f"printf '%s\\n' {shlex.quote(line)}; " for line in banner_lines)
+    return f"/bin/sh -c {shlex.quote(banner + 'exec ' + command)}"
+
+
 def format_build(source_code_dir : Path, build_type : str):
     build_type_icon = {
         "debug":   ":artist_palette:",
@@ -257,12 +314,7 @@ def format_build(source_code_dir : Path, build_type : str):
         "tsan":    ":thread:",
         "ubsan":   ":thread:",
     }.get(build_type, "")
-    git_branch = subprocess.run(["git", "symbolic-ref", "--short", "HEAD"], encoding='utf-8', cwd=source_code_dir, capture_output=True, check=False)
-    if (git_branch.returncode != 0):
-        git_branch = subprocess.run(["git", "rev-parse", "--short", "HEAD"], encoding='utf-8', cwd=source_code_dir, capture_output=True, check=True)
-
-    build_suffix = str(source_code_dir.relative_to(Path.home())).removeprefix('ClickHouse').removeprefix('clickhouse')
-    return f"{build_type_icon} '{build_suffix}' {git_branch.stdout.strip()} "
+    return f"{build_type_icon} '{get_build_suffix(source_code_dir)}' {get_git_branch(source_code_dir)} "
 
 
 def build_project(source_code_dir : Path, build_type : str, args):
@@ -308,6 +360,33 @@ def build_type_complete(prefix):
     return build_types[0]
 
 
+def build_merged_config_tree(src_dir : Path, server_cwd : Path, extra_dir : Path) -> Path:
+    """Build a config tree under server_cwd/.bld_config/ that overlays extra_dir
+    on the project's config.d/users.d. Returns the path to the merged config.xml."""
+    config_root = server_cwd / '.bld_config'
+    if config_root.exists():
+        shutil.rmtree(config_root)
+    config_root.mkdir(parents=True)
+
+    src_server = src_dir / 'programs' / 'server'
+    shutil.copy2(src_server / 'config.xml', config_root / 'config.xml')
+    shutil.copy2(src_server / 'users.xml', config_root / 'users.xml')
+
+    for subdir in ('config.d', 'users.d'):
+        merged = config_root / subdir
+        merged.mkdir()
+        for source in (src_server / subdir, extra_dir / subdir):
+            if not source.is_dir():
+                continue
+            for f in source.iterdir():
+                target = merged / f.name
+                if target.is_symlink() or target.exists():
+                    target.unlink()
+                shutil.copy2(f, target)
+
+    return config_root / 'config.xml'
+
+
 def read_pid(path):
     pid = None
     with open(path, 'r') as status_file:
@@ -316,8 +395,18 @@ def read_pid(path):
 
 
 def main(args, run_iteration=1):
+    envrc_path = Path(args.path).resolve() / ".envrc"
+    if isinstance(args.docker, str):
+        if args.docker in ('1', 'true', ''):
+            args.docker = DOCKER_IMAGE
+        if args.docker in ('0', 'false'):
+            args.docker = False
+
+    if args.docker is None and os.environ.get('BLD_USE_DOCKER') == '1':
+        args.docker = DOCKER_IMAGE
+
     server_cwd = Path(args.cwd).resolve()
-    if Path.is_file(server_cwd / 'status'):
+    if not args.docker and Path.is_file(server_cwd / 'status'):
         pid = read_pid(server_cwd / 'status')
         is_old_server_running = False
         if pid and args.force:
@@ -343,16 +432,6 @@ def main(args, run_iteration=1):
         subprocess.run(command, shell=True, check=True)
         sys.exit(0)
 
-    use_zmx = args.zmx is not None and args.zmx != '' and os.getenv('ZMX_SESSION') is None
-    if use_zmx:
-        if args.force:
-            execute_command(f"zmx kill {args.zmx}", check=False)
-        command_args = ' '.join(sys.argv)
-        command = f'zmx attach {args.zmx} {command_args}'
-        print(f'Run in zmx: \'{command}\'')
-        subprocess.run(command, shell=True, check=True)
-        sys.exit(0)
-
     if args.build and args.build != ['all']:
         args.build = [build_type_complete(prefix) for prefix in args.build]
 
@@ -368,16 +447,29 @@ def main(args, run_iteration=1):
         pprint(f":no_entry: Can't run multiple binaries: {build_info}")
         sys.exit(1)
 
+    use_tmux_session = args.session is not None and os.getenv('TMUX') is None
+    if use_tmux_session:
+        tmux_session_name = args.session
+        if tmux_session_name == '':
+            tmux_session_name = f"bld_clickhouse{get_build_suffix(build_path)}_{uuid.uuid4().hex[:6]}"
+        if args.force:
+            execute_command(f"tmux kill-session -t {tmux_session_name} 2>/dev/null", check=False, silent=True)
+        command_args = ' '.join(sys.argv)
+        command = f'tmux new-session -A -s {tmux_session_name} {shlex.quote(command_args)}'
+        print(f'Run in tmux: \'{command}\'')
+        subprocess.run(command, shell=True, check=True)
+        sys.exit(0)
+
     if args.run and len(build_info) == 1:
-        env_file_path = Path(args.path) / ".bld.env"
-        if Path.exists(env_file_path):
-            with open('.bld.env', 'w') as env_file:
-                env_file.write(f"BLD_TYPE={build_info[0]}\n")
+        update_envrc_file(envrc_path, {'BLD_TYPE': build_info[0]})
 
     pprint(f"{build_path}: {build_info}")
     preload_cmake = Path(build_path) / 'PreLoad.cmake'
     if preload_cmake.is_file():
-        execute_command(f"""sed -i 's/message(FATAL_ERROR "$/message( "/g' {preload_cmake}""", silent=True)
+        content = preload_cmake.read_text()
+        patched = re.sub(r'message\(FATAL_ERROR "$', 'message( "', content, flags=re.MULTILINE)
+        if patched != content:
+            preload_cmake.write_text(patched)
     print()
 
     for i, build_type in enumerate(build_info, 1):
@@ -420,9 +512,10 @@ def main(args, run_iteration=1):
         execute_command(f"sudo clickhouse restart")
 
     if args.link or args.run:
-        pprint(":link: {}link '{}' <- '{}'".format("" if args.n <= 1 else "will ", binary_path, SYMLINK_PATH))
+        symlink_path = build_path.parent.parent / SYMLINK_NAME
+        pprint(":link: {}link '{}' <- '{}'".format("" if args.n <= 1 else "will ", binary_path, symlink_path))
         if args.n <= 1:
-            force_symlink(binary_path, SYMLINK_PATH)
+            force_symlink(binary_path, symlink_path)
 
     if args.run or args.loop:
         server_cwd.mkdir(parents=True, exist_ok=True)
@@ -439,34 +532,148 @@ def main(args, run_iteration=1):
 
         src_dir = build_path.parent.parent
 
+        extra_envs = read_envs_from_file(Path.home() / '.aws.cred')
+        extra_envs["CLICKHOUSE_WATCHDOG_ENABLE"] = "0"
+        extra_envs["HOME"] = str(Path.home())
+
         envs_to_run = os.environ.copy()
-        envs_to_run.update(read_envs_from_file(Path.home() / '.aws.cred'))
-        envs_to_run["CLICKHOUSE_WATCHDOG_ENABLE"] = "0"
-        envs_to_run["HOME"] = str(Path.home())
+        envs_to_run.update(extra_envs)
 
         if args.nnd:
             binary_path = f"{NND_PATH} -d {src_dir} {binary_path}"
 
         extra_config_args = ['--logger.console=0']
-        if args.port:
+        if args.port and not args.docker:
             extra_config_args.append(f'--tcp_port={args.port}')
 
         server_cmd = f"{binary_path} server -L log.txt --config {src_dir}/programs/server/config.xml -- {' '.join(extra_config_args)}"
+
+        if args.docker:
+            if args.nnd:
+                pprint(":no_entry: --nnd is not supported with --docker")
+                sys.exit(1)
+            if args.loop:
+                pprint(":no_entry: --loop is not supported with --docker")
+                sys.exit(1)
+
+            suffix = get_build_suffix(src_dir)
+            digits = ''.join(c for c in suffix if c.isdigit())
+            docker_n = int(digits) if digits else 0
+            container_name = f"clickhouse-bld{suffix}" if suffix else "clickhouse-bld"
+
+            if args.port is None:
+                suggested_tcp = 9000 + docker_n * 100
+                suggested_http = 8123 + docker_n * 100
+                pprint(":no_entry: CLICKHOUSE_PORT_TCP is not set (required in --docker mode).")
+                pprint(f"   Suggested port for this worktree: {suggested_tcp}")
+                pprint(f"   Add to {envrc_path}:")
+                pprint(f"     export CLICKHOUSE_PORT_TCP={suggested_tcp}")
+                pprint(f"     export CLICKHOUSE_PORT_HTTP={suggested_http}")
+                sys.exit(1)
+
+            host_tcp = args.port
+            host_http = int(os.environ.get('CLICKHOUSE_PORT_HTTP', 8123 + docker_n * 100))
+
+            docker_image = args.docker if isinstance(args.docker, str) and args.docker not in ('', '1', 'true') else DOCKER_IMAGE
+
+            if '--cwd' not in sys.argv and not os.environ.get('BLD_SERVER_CWD') and suffix:
+                server_cwd = Path(os.path.expanduser(f"~/_tmp{suffix}")).resolve()
+                server_cwd.mkdir(parents=True, exist_ok=True)
+
+            if args.force == 1:
+                execute_command(f"docker stop -s9 {container_name}", check=False, silent=False)
+            elif args.force > 1:
+                execute_command(f"docker rm -f {container_name}", check=False, silent=False)
+            time.sleep(1)
+
+            extra_mounts = []
+            if EXTRA_CONFIG_DIR.is_dir():
+                merged_config = build_merged_config_tree(src_dir, server_cwd, EXTRA_CONFIG_DIR)
+                server_cmd = server_cmd.replace(
+                    f"--config {src_dir}/programs/server/config.xml",
+                    f"--config {merged_config}",
+                )
+                extra_mounts.append(f"-v {EXTRA_CONFIG_DIR}:{EXTRA_CONFIG_DIR}:ro")
+
+            docker_flags = "-d" if args.background else "-it"
+            docker_cmd = (
+                f"docker run --rm {docker_flags} --name {container_name} "
+                f"--user {os.getuid()}:{os.getgid()} "
+                f"-e CLICKHOUSE_WATCHDOG_ENABLE=0 "
+                f"-e HOME={Path.home()} "
+                f"-v {binary_path}:{binary_path}:ro "
+                f"-v {server_cwd}:{server_cwd} "
+                f"{' '.join(extra_mounts)} "
+                f"-p {host_tcp}:9000 "
+                f"-p {host_http}:8123 "
+                f"-w {server_cwd} "
+                f"{docker_image} "
+                f"{server_cmd}"
+            )
+
+            execute_command(docker_cmd, env=envs_to_run, dummy=args.n > 1)
+
+            if args.background and args.n <= 1:
+                pprint(f':rocket: Server started in container "{container_name}" (host TCP {host_tcp}, HTTP {host_http})')
+                pprint(f':hourglass_not_done: Waiting for server on port {host_tcp}...', end='', flush=True)
+                timeout = 120
+                start_time = time.time()
+                ready = False
+                while time.time() - start_time < timeout:
+                    try:
+                        result = subprocess.run(f"{binary_path} client --port {host_tcp} --query 'SELECT 1'", shell=True, capture_output=True, timeout=5)
+                        if result.returncode == 0 and result.stdout.strip() == b'1':
+                            ready = True
+                            break
+                    except subprocess.TimeoutExpired:
+                        pass
+                    print('.', end='', flush=True)
+                    time.sleep(0.5)
+                print()
+
+                if ready:
+                    elapsed = time.time() - start_time
+                    pprint(f':white_check_mark: Server is ready (took {elapsed:.1f}s)')
+                else:
+                    pprint(f':warning: Server health check timed out after {timeout}s')
+            return
+
+        # Non-docker path: overlay EXTRA_CONFIG_DIR (e.g. ~/etc-clickhouse) on the project config,
+        # mirroring the docker branch above so local server runs pick up the same extra config.
+        if EXTRA_CONFIG_DIR.is_dir():
+            merged_config = build_merged_config_tree(src_dir, server_cwd, EXTRA_CONFIG_DIR)
+            server_cmd = server_cmd.replace(
+                f"--config {src_dir}/programs/server/config.xml",
+                f"--config {merged_config}",
+            )
 
         if args.background:
             if args.loop:
                 pprint(":no_entry: --background and --loop are incompatible")
                 sys.exit(1)
-            zmx_session = args.zmx if args.zmx else "ch_server"
-            execute_command(f"zmx kill {zmx_session}", check=False, silent=True)
+            tmux_session = args.session if args.session else "ch_server"
+            execute_command(f"tmux kill-session -t {tmux_session} 2>/dev/null", check=False, silent=True)
             if args.n > 1:
-                pprint(f':spiral_shell: will run (background, zmx:{zmx_session}): {server_cmd}')
+                pprint(f':spiral_shell: will run (background, tmux:{tmux_session}): {server_cmd}')
             else:
-                full_cmd = f"cd {server_cwd} && {server_cmd}"
-                execute_command(f"zmx run {zmx_session} '{full_cmd}'", env=envs_to_run)
-                pprint(f':rocket: Server started in zmx session "{zmx_session}"')
-
                 tcp_port = args.port or 9000
+                banner_lines = [
+                    f"===== bld: {get_build_suffix(src_dir) or '/'} {get_git_branch(src_dir)} =====",
+                    f"worktree: {src_dir}",
+                    f"build:    {build_path}",
+                    f"cwd:      {server_cwd}",
+                    f"tcp port: {tcp_port}",
+                    f"log:      {server_cwd / 'log.txt'}",
+                    "",
+                ]
+                env_flags = ' '.join(f"-e {shlex.quote(f'{k}={v}')}" for k, v in extra_envs.items())
+                tmux_cmd = (
+                    f"tmux new-session -d -s {tmux_session} -c {server_cwd} {env_flags} "
+                    f"{shlex.quote(with_pane_banner(server_cmd, banner_lines))} \\; set-option remain-on-exit on"
+                )
+                execute_command(tmux_cmd, env=envs_to_run, silent=True)
+                pprint(f':rocket: Server started in tmux session "{tmux_session}" for worktree {src_dir} ({get_git_branch(src_dir)})')
+
                 pprint(f':hourglass_not_done: Waiting for server on port {tcp_port}...', end='', flush=True)
                 timeout = 120
                 start_time = time.time()

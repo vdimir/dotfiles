@@ -237,7 +237,7 @@
     "yaclock.prefix": "",
     "yaclock.showDate": true,
     "yaclock.showDay": true,
-    "diffEditor.ignoreTrimWhitespace": false,
+    "diffEditor.ignoreTrimWhitespace": true,
     "editor.minimap.size": "fill",
     "editor.cursorSurroundingLines": 5,
     "multiCommand.commands": [
@@ -295,7 +295,6 @@
         "workbench.action.tasks.configureTaskRunner",
         "workbench.action.tasks.runTask"
     ],
-    "diffEditor.hideUnchangedRegions.enabled": true,
     "gitlens.hovers.enabled": false,
     "editor.hover.sticky": false,
     "editor.hover.hidingDelay": 0,
@@ -326,5 +325,6 @@
     "claudeCode.preferredLocation": "panel",
     "claudeCode.selectedModel": "opus",
     "go.toolsManagement.autoUpdate": true,
+    "diffEditor.hideUnchangedRegions.enabled": true,
 }
 

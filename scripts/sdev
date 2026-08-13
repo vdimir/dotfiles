@@ -22,6 +22,24 @@ class Stopwatch:
     def elapsed(self):
         return time.time() - self.start
 
+def agterm_adopt(hostname, session_name):
+    """Wire agterm-remote status for this session (like `agr open`): ensure the
+    socket bridge, relabel the sidebar row, and return a remote shell snippet
+    that records agterm-session-id -> tmux-session-name for the agr status hook.
+    No-op outside agterm or when agr is not installed."""
+    sid = os.environ.get('AGTERM_SESSION_ID')
+    agr = os.path.expanduser('~/.local/bin/agr')
+    if not sid or not os.access(agr, os.X_OK):
+        return ''
+    subprocess.run([agr, 'up', hostname])
+    subprocess.run(['agtermctl', 'session', 'rename', session_name, '--target', sid],
+                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    return f'mkdir -p ~/.cache/agterm/targets; printf %s {sid} > ~/.cache/agterm/targets/{session_name}; '
+
+def set_tab_title(title):
+    """Set terminal tab/window title via OSC escape (kitty, iTerm2, etc.)."""
+    print(f'\033]0;{title}\007', end='', flush=True)
+
 if __name__ == '__main__':
     argparser = argparse.ArgumentParser()
     argparser.add_argument('-b', help='git branch pattern')
@@ -104,19 +122,23 @@ if __name__ == '__main__':
 
     if kind == 'session':
         print(f"Attaching to tmux session '{value}'...")
-        subprocess.run(f"ssh -t {hostname} 'tmux attach -t {value}'", shell=True)
+        set_tab_title(value)
+        adopt = agterm_adopt(hostname, value)
+        subprocess.run(f"ssh -t {hostname} '{adopt}tmux attach -t {value}'", shell=True)
     else:
         folder, branch = folders_with_branches[value]
         folder_safe = re.sub(r'[^a-z0-9]', '-', folder.lower())
-        session_name = f"{folder_safe[:24]}-{uuid.uuid4().hex[:6]}"
+        session_name = f"{folder_safe[:48]}-{uuid.uuid4().hex[:6]}"
+        set_tab_title(session_name)
+        adopt = agterm_adopt(hostname, session_name)
 
         if args.cmd:
             command = ' '.join(args.cmd)
             print(f"SSHing into {folder} @ '{branch}' via tmux '{session_name}' running '{command}'...")
             if args.i:
-                subprocess.run(f"ssh -t {hostname} 'tmux new-session -A -s {session_name} fish -C \"cd {folder}; {command}\"'", shell=True)
+                subprocess.run(f"ssh -t {hostname} '{adopt}tmux new-session -A -s {session_name} -c \"$HOME/{folder}\" fish -C \"{command}\"'", shell=True)
             else:
-                subprocess.run(f"ssh -t {hostname} 'tmux new-session -A -s {session_name} bash -c \"cd {folder} && {command}\"'", shell=True)
+                subprocess.run(f"ssh -t {hostname} '{adopt}tmux new-session -A -s {session_name} -c \"$HOME/{folder}\" bash -c \"{command}\"'", shell=True)
         else:
             print(f"SSHing into {folder} @ '{branch}' via tmux '{session_name}'...")
-            subprocess.run(f"ssh -t {hostname} 'tmux new-session -A -s {session_name} fish -C \"cd {folder}\"'", shell=True)
+            subprocess.run(f"ssh -t {hostname} '{adopt}tmux new-session -A -s {session_name} -c \"$HOME/{folder}\" fish'", shell=True)

@@ -7,6 +7,7 @@ Script for ssh-ing into particular folder on remote dev server interactively.
 import sys
 import os
 import re
+import json
 import subprocess
 import argparse
 import time
@@ -36,6 +37,46 @@ def agterm_adopt(hostname, session_name):
                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     return f'mkdir -p ~/.cache/agterm/targets; printf %s {sid} > ~/.cache/agterm/targets/{session_name}; '
 
+def kitty_window_titles():
+    """Titles of all kitty windows except the one running this script, used to
+    spot tmux sessions that already have a local kitty tab. Empty set outside
+    kitty or when remote control is unavailable."""
+    if not os.environ.get('KITTY_LISTEN_ON'):
+        return set()
+    try:
+        result = subprocess.run(['kitten', '@', 'ls'], stdout=subprocess.PIPE,
+                                stderr=subprocess.DEVNULL, timeout=2)
+        if result.returncode != 0:
+            return set()
+        win_id = os.environ.get('KITTY_WINDOW_ID')
+        titles = set()
+        for os_window in json.loads(result.stdout):
+            for tab in os_window.get('tabs', []):
+                for window in tab.get('windows', []):
+                    if win_id and str(window.get('id')) == win_id:
+                        continue
+                    titles.add(window.get('title', ''))
+        return titles
+    except (subprocess.TimeoutExpired, ValueError, OSError):
+        return set()
+
+def focus_kitty_tab(session_name):
+    """If some kitty window already holds this tmux session (its tab title was
+    set to the session name on attach), focus it instead of attaching again.
+    Needs `allow_remote_control socket-only` + `listen_on` in kitty.conf.
+    Returns True if a window was focused."""
+    if not os.environ.get('KITTY_LISTEN_ON'):
+        return False
+    # tmux set-titles-string appends " — <pane title>" to the session name
+    match = f'title:^{re.escape(session_name)}( — |$)'
+    win_id = os.environ.get('KITTY_WINDOW_ID')
+    if win_id:
+        match += f' and not id:{win_id}'
+    result = subprocess.run(
+        ['kitten', '@', 'focus-window', '--match', match],
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    return result.returncode == 0
+
 def set_tab_title(title):
     """Set terminal tab/window title via OSC escape (kitty, iTerm2, etc.)."""
     print(f'\033]0;{title}\007', end='', flush=True)
@@ -57,7 +98,7 @@ if __name__ == '__main__':
         done"'
     """.strip()
 
-    tmux_fmt = "session_name=#{session_name}\tcmd=#{pane_current_command}"
+    tmux_fmt = "session_name=#{session_name}\tcmd=#{pane_current_command}\tattached=#{session_attached}\ttitle=#{pane_title}\thost=#{host}"
     get_sessions_cmd = f"ssh {hostname} 'tmux list-sessions -F \"{tmux_fmt}\" 2>/dev/null'"
 
     folders_proc = subprocess.Popen(get_folders_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -95,11 +136,20 @@ if __name__ == '__main__':
         selection = ('folder', 0)
 
     if selection is None:
+        kitty_titles = kitty_window_titles() if tmux_sessions else set()
         choices = []
         for session in tmux_sessions:
             name = session.get('session_name', '?')
             cmd = session.get('cmd', '')
-            label = f"[tmux] {name}  ({cmd})" if cmd else f"[tmux] {name}"
+            attached = session.get('attached', '0') != '0'
+            in_kitty = any(t == name or t.startswith(f'{name} — ') for t in kitty_titles)
+            tag = '◉' if in_kitty else ('●' if attached else '○')
+            label = f"{tag} {name}  ({cmd})" if cmd else f"{tag} {name}"
+            # pane_title carries app status (e.g. Claude Code sets it via OSC);
+            # it defaults to the host name, so only show it when overridden
+            title = session.get('title', '')
+            if title and title not in (session.get('host', ''), cmd, name):
+                label += f"  — {title}"
             choices.append(questionary.Choice(label, ('session', name)))
         for i, (name, branch) in enumerate(folders_with_branches):
             choices.append(questionary.Choice(f"{name} @ {branch}", ('folder', i)))
@@ -121,6 +171,9 @@ if __name__ == '__main__':
     kind, value = selection
 
     if kind == 'session':
+        if focus_kitty_tab(value):
+            print(f"Switched to kitty tab already attached to '{value}'")
+            sys.exit(0)
         print(f"Attaching to tmux session '{value}'...")
         set_tab_title(value)
         adopt = agterm_adopt(hostname, value)

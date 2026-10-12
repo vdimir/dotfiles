@@ -71,8 +71,8 @@ def focus_kitty_tab(session_name):
     Returns True if a window was focused."""
     if not os.environ.get('KITTY_LISTEN_ON'):
         return False
-    # tmux set-titles-string appends " — <pane title>" to the session name
-    match = f'title:^{re.escape(session_name)}( — |$)'
+    # tmux set-titles-string is "<pane title> (<session>)", or bare session name
+    match = f'title:^(?:{re.escape(session_name)}|.* \\({re.escape(session_name)}\\))$'
     win_id = os.environ.get('KITTY_WINDOW_ID')
     if win_id:
         match += f' and not id:{win_id}'
@@ -146,7 +146,7 @@ if __name__ == '__main__':
             name = session.get('session_name', '?')
             cmd = session.get('cmd', '')
             attached = session.get('attached', '0') != '0'
-            in_kitty = any(t == name or t.startswith(f'{name} — ') for t in kitty_titles)
+            in_kitty = any(t == name or t.endswith(f' ({name})') for t in kitty_titles)
             tag = '◉' if in_kitty else ('●' if attached else '○')
             label = f"{tag} {name}  ({cmd})" if cmd else f"{tag} {name}"
             # pane_title carries app status (e.g. Claude Code sets it via OSC);
@@ -158,7 +158,7 @@ if __name__ == '__main__':
         for i, (name, branch) in enumerate(folders_with_branches):
             choices.append(questionary.Choice(f"{name} @ {branch}", ('folder', i)))
 
-        result = questionary.select(
+        question = questionary.select(
             f"SSH into @{hostname}:",
             choices=choices,
             pointer='▸',
@@ -167,7 +167,14 @@ if __name__ == '__main__':
                 ("highlighted", "fg:#ffffff"),
                 ("text", "fg:#aaaaaa"),
             ])
-        ).ask()
+        )
+
+        @question.application.key_bindings.add('escape')
+        @question.application.key_bindings.add('q')
+        def _cancel(event):
+            event.app.exit(result=None)
+
+        result = question.ask()
         if result is None:
             sys.exit(1)
         selection = result

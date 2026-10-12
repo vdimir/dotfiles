@@ -98,6 +98,38 @@ def start_forward(hostname, port):
          '-L', f'{port}:localhost:{port}', hostname],
         stdin=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0
 
+def wait_key():
+    """Wait for a single keypress so a launcher-spawned terminal window
+    doesn't close before the message can be read."""
+    print('press any key to close...', end='', file=sys.stderr, flush=True)
+    try:
+        import termios, tty
+        fd = sys.stdin.fileno()
+        old = termios.tcgetattr(fd)
+        try:
+            tty.setraw(fd)
+            sys.stdin.read(1)
+        finally:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old)
+    except Exception:
+        try:
+            input()
+        except EOFError:
+            pass
+    print(file=sys.stderr)
+
+def fail(msg):
+    print(msg, file=sys.stderr)
+    wait_key()
+    sys.exit(1)
+
+def _excepthook(tp, val, tb):
+    sys.__excepthook__(tp, val, tb)
+    if tp is not KeyboardInterrupt:
+        wait_key()
+
+sys.excepthook = _excepthook
+
 def open_if_http(port):
     url = f'http://localhost:{port}'
     if subprocess.run(['curl', '-s', '-o', '/dev/null', '-m', '2', url]).returncode == 0:
@@ -124,8 +156,7 @@ if __name__ == '__main__':
 
     listeners = remote_listeners(hostname)
     if not listeners:
-        print(f'No listening ports found on {hostname}')
-        sys.exit(1)
+        fail(f'No listening ports found on {hostname}')
 
     def label(port, tag=None):
         if tag is None:
@@ -140,7 +171,7 @@ if __name__ == '__main__':
         choices=choices,
         pointer='▸',
         use_shortcuts=True,
-        instruction='(space: start/stop, enter: forward, o: forward + open, x: blacklist)',
+        instruction='(space: start/stop, enter: forward, f: forward + open, x: blacklist)',
         style=questionary.Style([
             ("highlighted", "fg:#ffffff"),
             ("text", "fg:#aaaaaa"),
@@ -186,7 +217,7 @@ if __name__ == '__main__':
 
     want_open = []
 
-    @question.application.key_bindings.add('o')
+    @question.application.key_bindings.add('f')
     def _open(event):
         want_open.append(True)
         event.app.exit(result=ic.get_pointed_at().value)
@@ -209,8 +240,7 @@ if __name__ == '__main__':
 
     if port not in active:
         if not start_forward(hostname, port):
-            print(f'failed to forward :{port}', file=sys.stderr)
-            sys.exit(1)
+            fail(f'failed to forward :{port}')
         print(f'⇄ forwarding localhost:{port} -> {hostname}:{port}')
 
     if want_open and not open_if_http(port):

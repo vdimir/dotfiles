@@ -644,5 +644,10 @@
     {
         "key": "cmd+; cmd+r",
         "command": "workbench.action.files.toggleActiveEditorReadonlyInSession"
+    },
+    {
+        "key": "alt+cmd+s",
+        "command": "workbench.action.toggleUnifiedSidebarFromKeyboard",
+        "when": "!isAuxiliaryWindowFocusedContext"
     }
 ]

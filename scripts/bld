@@ -43,7 +43,7 @@ def emojize(msg):
 def pprint(msg, **kwargs):
     print(emojize(str(msg)), **kwargs)
 
-CLANG_VERSION = int(os.environ.get('BLD_CLANG_VERSION', 21))
+CLANG_VERSION = int(os.environ.get('BLD_CLANG_VERSION', 22))
 NND_PATH = os.path.expanduser(os.environ.get('BLD_NND_PATH', "~/nnd"))
 
 BUILD_TARGETS = ["clickhouse"]
@@ -109,6 +109,14 @@ BUILD_TYPE_ARGS = {
 }
 
 
+def parse_bool(value : str):
+    if value.lower() in ('1', 'true', 'yes', 'on'):
+        return True
+    if value.lower() in ('0', 'false', 'no', 'off'):
+        return False
+    raise argparse.ArgumentTypeError(f"expected a boolean value, got '{value}'")
+
+
 class ToggleAction(argparse.Action):
     def __init__(self, option_strings, dest, nargs=None, **kwargs):
         short_opts = [opt for opt in option_strings if len(opt) == 2 and opt.startswith('-')]
@@ -131,12 +139,14 @@ def parse_args():
     parser.add_argument("--cwd", type=str, default=SERVER_CWD, help="working directory for the server (default: {})".format(SERVER_CWD))
     parser.add_argument("--port", type=int, default=os.environ.get('CLICKHOUSE_PORT_TCP', None), help="port to run the server")
     parser.add_argument("--force", "-f", action="count", default=0, help="kill server if another instance is running")
-    parser.add_argument("--docker", nargs='?', const=True, default=None,
-        help="run the server inside a Docker container with per-worktree workdir and ports; optionally pass an image")
+    parser.add_argument("--docker", nargs='?', type=parse_bool, const=True, default=None,
+        help="run the server inside a Docker container with per-worktree workdir and ports; --docker=0/1 switches the mode and remembers it in .envrc")
     parser.add_argument("--link", action=ToggleAction, default=False, help=argparse.SUPPRESS)
     parser.add_argument("--install", action=ToggleAction, default=False, help=argparse.SUPPRESS)
     parser.add_argument("--cmake", action=ToggleAction, default=None, help="rerun cmake command")
     parser.add_argument("--run", "-r", nargs='?', const=True, help="run the server after the build. build type can be specified")
+    parser.add_argument("--binary", type=Path, default=None,
+        help="run this prebuilt binary (e.g. ~/clickhouse.0) instead of building; implies --run and reuses the worktree's config, cwd and ports")
     parser.add_argument("--nnd", action=ToggleAction, default=None, help="use nnd debugger to run the server")
     default_bld_type = os.environ.get('BLD_TYPE')
     parser.add_argument("--build", "-b", nargs='+', default=[default_bld_type] if default_bld_type else [],
@@ -150,6 +160,21 @@ def parse_args():
     parser.add_argument("--all-targets", action=ToggleAction, default=False)
 
     return parser.parse_args()
+
+def get_source_dir(path):
+    """Worktree root for a path inside it or inside one of its build directories."""
+    path = Path(path).resolve()
+
+    if not path.is_relative_to(Path.home()):
+        raise Exception("Path must be relative to home dir: {}".format(path))
+
+    if path.match(f'?lick?ouse*/{BUILD_DIR_PREFIX}*'):
+        return path.parent.parent
+    if path.match('?lick?ouse*'):
+        return path
+
+    raise Exception("Not a ClickHouse worktree: '{}'".format(path))
+
 
 def get_build_params(path, build_types):
     path = Path(path).resolve()
@@ -236,37 +261,57 @@ def read_envs_from_file(cred_env_path):
         for line in cred_env_file.readlines():
             if line.startswith('#') or line.strip() == '':
                 continue
-            key, value = line.removeprefix('export ').strip().split('=', 1)
-            envs[key] = value
+            key, value = line.strip().removeprefix('export ').strip().split('=', 1)
+            # The file is shell syntax, so a value may be quoted (`export KEY="v"`); the quotes are not
+            # part of the value.
+            parts = shlex.split(value)
+            envs[key] = parts[0] if parts else ''
     return envs
 
 
+def envrc_line_key(line : str):
+    """Key of an `export KEY=VALUE` line, commented out or not, None for anything else."""
+    body = line.strip().removeprefix('#').strip().removeprefix('export ').strip()
+    return body.split('=', 1)[0] if '=' in body else None
+
+
+def read_envrc_value(envrc_path : Path, key : str):
+    """Value assigned to a key in .envrc, including a line commented out by a previous update."""
+    if not envrc_path.is_file():
+        return None
+    for line in envrc_path.read_text().splitlines():
+        if envrc_line_key(line) == key:
+            return line.split('=', 1)[1].strip()
+    return None
+
+
 def update_envrc_file(envrc_path : Path, updates : dict):
-    """Update/add `export KEY=VALUE` lines in a direnv-style .envrc, creating the file if missing."""
+    """Update/add `export KEY=VALUE` lines in a direnv-style .envrc, creating the file if missing.
+
+    A None value comments the line out instead of dropping it, so a later update can revive its value.
+    """
     lines = []
     seen = set()
     if envrc_path.is_file():
-        with open(envrc_path, 'r') as f:
-            for line in f.readlines():
-                stripped = line.strip()
-                if stripped.startswith('#') or stripped == '':
-                    lines.append(line.rstrip('\n'))
-                    continue
-                body = stripped.removeprefix('export ').strip()
-                if '=' not in body:
-                    lines.append(line.rstrip('\n'))
-                    continue
-                key = body.split('=', 1)[0]
-                if key in updates:
-                    lines.append(f"export {key}={updates[key]}")
-                    seen.add(key)
-                else:
-                    lines.append(line.rstrip('\n'))
+        for line in envrc_path.read_text().splitlines():
+            key = envrc_line_key(line)
+            if key not in updates:
+                lines.append(line)
+                continue
+            value = updates[key]
+            lines.append(f"export {key}={value}" if value is not None else '# ' + line.strip().removeprefix('#').strip())
+            seen.add(key)
     for key, value in updates.items():
-        if key not in seen:
+        if key not in seen and value is not None:
             lines.append(f"export {key}={value}")
-    with open(envrc_path, 'w') as f:
-        f.write('\n'.join(lines) + '\n')
+
+    content = '\n'.join(lines) + '\n'
+    if envrc_path.is_file() and envrc_path.read_text() == content:
+        return
+    envrc_path.write_text(content)
+    # direnv blocks the directory after every content change, so re-authorize what we just wrote ourselves.
+    if shutil.which('direnv'):
+        subprocess.run(['direnv', 'allow', str(envrc_path)], check=False)
 
 
 def execute_command(command, dummy=False, silent=False, log_file=None, **kwargs):
@@ -288,6 +333,14 @@ def execute_command(command, dummy=False, silent=False, log_file=None, **kwargs)
 
 def get_build_suffix(source_code_dir : Path):
     return str(source_code_dir.relative_to(Path.home())).removeprefix('ClickHouse').removeprefix('clickhouse')
+
+def get_docker_ports(source_code_dir : Path):
+    """Host ports for the container of this worktree, derived from its name suffix: the digits pick a hundreds
+    block and a dash adds 1, so ~/ClickHouse2 -> 9200, 8323; ~/clickhouse-private -> 9001, 8124; ~/clickhouse-private1 -> 9101, 8224."""
+    suffix = get_build_suffix(source_code_dir)
+    digits = ''.join(c for c in suffix if c.isdigit())
+    shift = (int(digits) if digits else 0) * 100 + (1 if '-' in suffix else 0)
+    return 9000 + shift, 8123 + shift
 
 def get_git_branch(source_code_dir : Path):
     git_branch = subprocess.run(["git", "symbolic-ref", "--short", "HEAD"], encoding='utf-8', cwd=source_code_dir, capture_output=True, check=False)
@@ -396,14 +449,9 @@ def read_pid(path):
 
 def main(args, run_iteration=1):
     envrc_path = Path(args.path).resolve() / ".envrc"
-    if isinstance(args.docker, str):
-        if args.docker in ('1', 'true', ''):
-            args.docker = DOCKER_IMAGE
-        if args.docker in ('0', 'false'):
-            args.docker = False
-
-    if args.docker is None and os.environ.get('BLD_USE_DOCKER') == '1':
-        args.docker = DOCKER_IMAGE
+    docker_requested = args.docker is not None
+    if args.docker is None:
+        args.docker = os.environ.get('BLD_USE_DOCKER') == '1'
 
     server_cwd = Path(args.cwd).resolve()
     if not args.docker and Path.is_file(server_cwd / 'status'):
@@ -425,7 +473,7 @@ def main(args, run_iteration=1):
 
     if args.tmux and os.getenv('TMUX') is None:
         command_args = ' '.join(sys.argv)
-        if not args.build:
+        if not args.build and args.binary is None:
             command_args += ' --build all'
         command = f'tmux new-session "{command_args}"'
         print(f'Run in tmux: \'{command}\'')
@@ -435,17 +483,26 @@ def main(args, run_iteration=1):
     if args.build and args.build != ['all']:
         args.build = [build_type_complete(prefix) for prefix in args.build]
 
-    if not args.build and isinstance(args.run, str):
-        args.build = [build_type_complete(args.run)]
+    custom_binary = None
+    if args.binary is not None:
+        custom_binary = args.binary.expanduser().resolve()
+        if not custom_binary.is_file():
+            pprint(f":no_entry: Binary not found: {args.binary}")
+            sys.exit(1)
+        args.run = True
+        build_path, build_info = get_source_dir(args.path), []
+    else:
+        if not args.build and isinstance(args.run, str):
+            args.build = [build_type_complete(args.run)]
 
-    build_path, build_info = get_build_params(args.path, args.build)
-    if not build_info:
-        pprint(":no_entry: No binary found")
-        sys.exit(1)
+        build_path, build_info = get_build_params(args.path, args.build)
+        if not build_info:
+            pprint(":no_entry: No binary found")
+            sys.exit(1)
 
-    if args.run and len(build_info) > 1:
-        pprint(f":no_entry: Can't run multiple binaries: {build_info}")
-        sys.exit(1)
+        if args.run and len(build_info) > 1:
+            pprint(f":no_entry: Can't run multiple binaries: {build_info}")
+            sys.exit(1)
 
     use_tmux_session = args.session is not None and os.getenv('TMUX') is None
     if use_tmux_session:
@@ -463,9 +520,27 @@ def main(args, run_iteration=1):
     if args.run and len(build_info) == 1:
         update_envrc_file(envrc_path, {'BLD_TYPE': build_info[0]})
 
-    pprint(f"{build_path}: {build_info}")
+    if docker_requested:
+        envrc_updates = {'BLD_USE_DOCKER': 1 if args.docker else None}
+        if args.docker and args.port is None:
+            suggested_tcp, suggested_http = get_docker_ports(build_path)
+            args.port = int(read_envrc_value(envrc_path, 'CLICKHOUSE_PORT_TCP') or suggested_tcp)
+            host_http = int(read_envrc_value(envrc_path, 'CLICKHOUSE_PORT_HTTP') or suggested_http)
+            os.environ['CLICKHOUSE_PORT_HTTP'] = str(host_http)
+            envrc_updates['CLICKHOUSE_PORT_TCP'] = args.port
+            envrc_updates['CLICKHOUSE_PORT_HTTP'] = host_http
+        elif not args.docker:
+            # The container ports mean nothing on the host: keep them commented out for the next switch.
+            args.port = None
+            os.environ.pop('CLICKHOUSE_PORT_HTTP', None)
+            envrc_updates['CLICKHOUSE_PORT_TCP'] = None
+            envrc_updates['CLICKHOUSE_PORT_HTTP'] = None
+        update_envrc_file(envrc_path, envrc_updates)
+        pprint(f":memo: {envrc_path}: " + ', '.join(f"{k}={v}" if v is not None else f"#{k}" for k, v in envrc_updates.items()))
+
+    pprint(f"{build_path}: {build_info if custom_binary is None else f'custom binary {custom_binary}'}")
     preload_cmake = Path(build_path) / 'PreLoad.cmake'
-    if preload_cmake.is_file():
+    if custom_binary is None and preload_cmake.is_file():
         content = preload_cmake.read_text()
         patched = re.sub(r'message\(FATAL_ERROR "$', 'message( "', content, flags=re.MULTILINE)
         if patched != content:
@@ -492,27 +567,34 @@ def main(args, run_iteration=1):
     if not args.link and not args.run and not args.install:
         return
 
-    build_paths = [build_path / f'{BUILD_DIR_PREFIX}{t}' for t in build_info]
-    print("build_paths" , build_paths)
-    if len(build_paths) == 0:
-        pprint("No binary found")
-        return
+    if custom_binary is not None:
+        src_dir = build_path
+        build_path = None
+        binary_path = custom_binary
+    else:
+        build_paths = [build_path / f'{BUILD_DIR_PREFIX}{t}' for t in build_info]
+        print("build_paths" , build_paths)
+        if len(build_paths) == 0:
+            pprint("No binary found")
+            return
 
-    build_path = None
-    if len(build_paths) == 1 or isinstance(args.run, str):
-        build_path = build_paths[0]
+        build_path = None
+        if len(build_paths) == 1 or isinstance(args.run, str):
+            build_path = build_paths[0]
 
-    if not build_path:
-        return
+        if not build_path:
+            return
 
-    binary_path = build_path / BINARY_RELATIVE_PATH
+        src_dir = build_path.parent.parent
+        binary_path = build_path / BINARY_RELATIVE_PATH
 
     if args.install:
         execute_command(f"sudo {binary_path} install")
         execute_command(f"sudo clickhouse restart")
 
-    if args.link or args.run:
-        symlink_path = build_path.parent.parent / SYMLINK_NAME
+    # The symlink tracks the worktree's own build; a custom binary replaces it only on explicit --link.
+    if args.link or (args.run and custom_binary is None):
+        symlink_path = src_dir / SYMLINK_NAME
         pprint(":link: {}link '{}' <- '{}'".format("" if args.n <= 1 else "will ", binary_path, symlink_path))
         if args.n <= 1:
             force_symlink(binary_path, symlink_path)
@@ -529,8 +611,6 @@ def main(args, run_iteration=1):
         elif args.clear > 0:
             log_file_path = server_cwd / 'log.txt'
             log_file_path.unlink(missing_ok=True)
-
-        src_dir = build_path.parent.parent
 
         extra_envs = read_envs_from_file(Path.home() / '.aws.cred')
         extra_envs["CLICKHOUSE_WATCHDOG_ENABLE"] = "0"
@@ -557,24 +637,19 @@ def main(args, run_iteration=1):
                 sys.exit(1)
 
             suffix = get_build_suffix(src_dir)
-            digits = ''.join(c for c in suffix if c.isdigit())
-            docker_n = int(digits) if digits else 0
             container_name = f"clickhouse-bld{suffix}" if suffix else "clickhouse-bld"
+            suggested_tcp, suggested_http = get_docker_ports(src_dir)
 
             if args.port is None:
-                suggested_tcp = 9000 + docker_n * 100
-                suggested_http = 8123 + docker_n * 100
                 pprint(":no_entry: CLICKHOUSE_PORT_TCP is not set (required in --docker mode).")
                 pprint(f"   Suggested port for this worktree: {suggested_tcp}")
-                pprint(f"   Add to {envrc_path}:")
+                pprint(f"   Run 'bld --docker=1' to write it to {envrc_path}, or add manually:")
                 pprint(f"     export CLICKHOUSE_PORT_TCP={suggested_tcp}")
                 pprint(f"     export CLICKHOUSE_PORT_HTTP={suggested_http}")
                 sys.exit(1)
 
             host_tcp = args.port
-            host_http = int(os.environ.get('CLICKHOUSE_PORT_HTTP', 8123 + docker_n * 100))
-
-            docker_image = args.docker if isinstance(args.docker, str) and args.docker not in ('', '1', 'true') else DOCKER_IMAGE
+            host_http = int(os.environ.get('CLICKHOUSE_PORT_HTTP', suggested_http))
 
             if '--cwd' not in sys.argv and not os.environ.get('BLD_SERVER_CWD') and suffix:
                 server_cwd = Path(os.path.expanduser(f"~/_tmp{suffix}")).resolve()
@@ -596,18 +671,27 @@ def main(args, run_iteration=1):
                 extra_mounts.append(f"-v {EXTRA_CONFIG_DIR}:{EXTRA_CONFIG_DIR}:ro")
 
             docker_flags = "-d" if args.background else "-it"
+            # The variables of ~/.aws.cred reach the container through an env file (mode 600, next to the
+            # merged config) rather than the command line, so `from_env` in the server config works in
+            # docker mode as it does under tmux, without the values showing up in the process list.
+            env_file = server_cwd / '.bld_config' / 'server.env'
+            env_file.parent.mkdir(parents=True, exist_ok=True)
+            env_file.write_text(''.join(f"{k}={v}\n" for k, v in extra_envs.items()
+                                        if k not in ('HOME', 'CLICKHOUSE_WATCHDOG_ENABLE')))
+            env_file.chmod(0o600)
             docker_cmd = (
                 f"docker run --rm {docker_flags} --name {container_name} "
                 f"--user {os.getuid()}:{os.getgid()} "
                 f"-e CLICKHOUSE_WATCHDOG_ENABLE=0 "
                 f"-e HOME={Path.home()} "
+                f"--env-file {env_file} "
                 f"-v {binary_path}:{binary_path}:ro "
                 f"-v {server_cwd}:{server_cwd} "
                 f"{' '.join(extra_mounts)} "
                 f"-p {host_tcp}:9000 "
                 f"-p {host_http}:8123 "
                 f"-w {server_cwd} "
-                f"{docker_image} "
+                f"{DOCKER_IMAGE} "
                 f"{server_cmd}"
             )
 
@@ -660,7 +744,7 @@ def main(args, run_iteration=1):
                 banner_lines = [
                     f"===== bld: {get_build_suffix(src_dir) or '/'} {get_git_branch(src_dir)} =====",
                     f"worktree: {src_dir}",
-                    f"build:    {build_path}",
+                    f"binary:   {binary_path}" if custom_binary is not None else f"build:    {build_path}",
                     f"cwd:      {server_cwd}",
                     f"tcp port: {tcp_port}",
                     f"log:      {server_cwd / 'log.txt'}",
@@ -669,7 +753,7 @@ def main(args, run_iteration=1):
                 env_flags = ' '.join(f"-e {shlex.quote(f'{k}={v}')}" for k, v in extra_envs.items())
                 tmux_cmd = (
                     f"tmux new-session -d -s {tmux_session} -c {server_cwd} {env_flags} "
-                    f"{shlex.quote(with_pane_banner(server_cmd, banner_lines))} \\; set-option remain-on-exit on"
+                    f"{shlex.quote(with_pane_banner(server_cmd, banner_lines))} \\; set-option -w -t {tmux_session}: remain-on-exit on"
                 )
                 execute_command(tmux_cmd, env=envs_to_run, silent=True)
                 pprint(f':rocket: Server started in tmux session "{tmux_session}" for worktree {src_dir} ({get_git_branch(src_dir)})')

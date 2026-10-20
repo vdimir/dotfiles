@@ -1,0 +1,28 @@
+{
+    "workbench.colorCustomizations": {
+        "[Base16 Grayscale Light]": {
+            "editor.background": "#f8f8fa",
+            "editorCursor.foreground": "#404040",
+            "editor.foreground": "#404040",
+            "editor.wordHighlightBorder": "#303030",
+            "editor.selectionHighlightBackground": "#f0f0f0",
+            "editor.selectionHighlightBorder": "#ababab55",
+            "editor.findMatchHighlightBackground": "#FFEEAAAA",
+            "editor.findMatchBackground": "#ffddaa55",
+            "diffEditor.removedTextBackground": "#f1e6e6",
+            "diffEditor.insertedTextBackground": "#c4d1c300",
+            "diffEditor.insertedLineBackground": "#c4d1c343",
+            "editorBracketHighlight.foreground1": "#202030",
+            "editorBracketHighlight.foreground2": "#5d5dd8",
+            "editorBracketHighlight.foreground3": "#202030"
+        },
+        "[Base16 Grayscale Dark]": {
+            "editor.background": "#1e1e1e",
+            "editorCursor.foreground": "#d4d4d4",
+            "editor.foreground": "#d4d4d4"
+        },
+        "activityBar.background": "#401C5C",
+        "titleBar.activeBackground": "#592780",
+        "titleBar.activeForeground": "#FCFAFD"
+    }
+}

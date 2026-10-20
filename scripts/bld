@@ -406,6 +406,17 @@ def build_project(source_code_dir : Path, build_type : str, args):
     return True
 
 
+def format_duration(seconds: float) -> str:
+    seconds = int(round(seconds))
+    h, rem = divmod(seconds, 3600)
+    m, s = divmod(rem, 60)
+    if h:
+        return f"{h}h {m}m {s}s"
+    if m:
+        return f"{m}m {s}s"
+    return f"{s}s"
+
+
 def build_type_complete(prefix):
     build_types = [build_type for build_type in BUILD_TYPE_ARGS if build_type.startswith(prefix)]
     if len(build_types) == 0:
@@ -547,14 +558,21 @@ def main(args, run_iteration=1):
             preload_cmake.write_text(patched)
     print()
 
-    for i, build_type in enumerate(build_info, 1):
+    total_start = time.monotonic()
+    for i, build_type in enumerate(list(build_info), 1):
         build_no_str = f"[{i}/{len(build_info)}]" if len(build_info) > 1 else ""
         build_info_str = format_build(build_path, build_type)
         set_terminal_title(f"{build_no_str} {build_info_str}", use_emoji=True)
+        build_start = time.monotonic()
         is_ok = build_project(build_path, build_type, args)
+        build_took = format_duration(time.monotonic() - build_start)
         if not is_ok:
-            pprint(f":warning: {build_info_str} failed")
+            pprint(f":warning: {build_info_str} failed after {build_took}")
             del build_info[build_info.index(build_type)]
+        else:
+            pprint(f":white_check_mark: {build_info_str} built in {build_took}")
+    if len(build_info) > 1:
+        pprint(f"Total build time: {format_duration(time.monotonic() - total_start)}")
 
     set_terminal_title(f"bld done!")
 

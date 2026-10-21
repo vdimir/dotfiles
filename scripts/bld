@@ -67,8 +67,8 @@ def set_terminal_title(title, use_emoji=False):
 
 def get_build_args(build_type, sanitizer = None, compiler_flags = None, extra_cmake_options = []):
     if sys.platform == 'darwin':
-        c_compiler = "$(brew --prefix llvm)/bin/clang"
-        cxx_compiler = "$(brew --prefix llvm)/bin/clang++"
+        c_compiler = f"$(brew --prefix llvm@{CLANG_VERSION})/bin/clang"
+        cxx_compiler = f"$(brew --prefix llvm@{CLANG_VERSION})/bin/clang++"
     else:
         c_compiler = f"`which clang-{CLANG_VERSION}`"
         cxx_compiler = f"`which clang++-{CLANG_VERSION}`"

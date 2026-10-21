@@ -1,13 +1,15 @@
 PATH=$PATH:/usr/local/bin
-PATH=$PATH:/opt/homebrew/bin
+PATH=/opt/homebrew/bin:$PATH
 
-FPATH="$(brew --prefix)/share/zsh/site-functions:${FPATH}"
+HOMEBREW_PREFIX=/opt/homebrew
 
-PATH="$(brew --prefix)/opt/findutils/libexec/gnubin:$(brew --prefix)/opt/grep/libexec/gnubin:$PATH"
+FPATH="$HOMEBREW_PREFIX/share/zsh/site-functions:${FPATH}"
+
+PATH="$HOMEBREW_PREFIX/opt/findutils/libexec/gnubin:$HOMEBREW_PREFIX/opt/grep/libexec/gnubin:$PATH"
 PATH="${HOME}/Library/Python/3.8/bin/:$PATH"
 PATH="${HOME}/Library/Python/3.9/bin/:$PATH"
 
-source $(brew --prefix zsh-syntax-highlighting)/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+source $HOMEBREW_PREFIX/opt/zsh-syntax-highlighting/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 
 # https://geoff.greer.fm/lscolors/
 export LS_COLORS='di=1;34:ln=36:so=1;32:pi=1;33:ex=35:bd=34;46:cd=34;43:su=30;41:sg=30;46:tw=30;42:ow=30;43'
@@ -20,7 +22,8 @@ alias -g SND='&& afplay /System/Library/Sounds/Pop.aiff || afplay /System/Librar
 
 export HOMEBREW_NO_AUTO_UPDATE=1
 
-export PATH="/usr/local/opt/llvm/bin:$PATH"
+export PATH="$HOMEBREW_PREFIX/opt/llvm/bin:$PATH"
+export PATH="$HOMEBREW_PREFIX/opt/rustup/bin:$PATH"
 export PATH="/usr/local/opt/findutils/libexec/gnubin:$PATH"
 
 # kitty + complete setup zsh | source /dev/stdin

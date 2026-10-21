@@ -94,6 +94,8 @@ if __name__ == '__main__':
     args = argparser.parse_args()
 
     hostname = args.host
+    if not hostname:
+        argparser.error('no host: pass --host or set SSH_DEV_HOST')
     get_folders_cmd = f"""
         ssh {hostname} 'bash -c "for f in ClickHouse* clickhouse-*; do
             [ -d \\"\\$f\\" ] && [ -d \\"\\$f/.git\\" ] || continue;
@@ -114,11 +116,12 @@ if __name__ == '__main__':
         print(f'\r{sw.elapsed():.02f}s', end='', flush=True)
     print()
 
-    folders_stdout, _ = folders_proc.communicate()
+    folders_stdout, folders_stderr = folders_proc.communicate()
     sessions_stdout, _ = sessions_proc.communicate()
 
     if folders_proc.returncode != 0:
-        print(folders_stdout.decode('utf-8'))
+        print(folders_stdout.decode('utf-8'), end='')
+        print(folders_stderr.decode('utf-8'), end='', file=sys.stderr)
         sys.exit(1)
 
     folders_with_branches = list(filter(lambda x: len(x) == 2, (name.strip().split(' ') for name in folders_stdout.decode('utf-8').splitlines())))

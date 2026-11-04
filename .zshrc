@@ -9,7 +9,6 @@ fpath=(~/.zsh ~/.zfunc $fpath)
 fpath=(/usr/local/share/zsh/site-functions $fpath)
 
 
-source /usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh>/dev/null 2>&1
 source ~/.zsh/zsh-autosuggestions/zsh-autosuggestions.zsh>/dev/null 2>&1
 source ~/.zsh/zprofile.sh>/dev/null 2>&1
 source ~/.zsh/zprofile.`uname`.sh>/dev/null 2>&1
@@ -151,7 +150,7 @@ export LANG=en_US.UTF-8
 
 stty -ixon
 
-autoload -U +X compinit && compinit
+autoload -U +X compinit && compinit -C
 autoload -U +X bashcompinit && bashcompinit
 
 # zprof
@@ -165,3 +164,6 @@ export PATH=$PATH:$GOPATH/bin
 export PATH="/opt/homebrew/opt/llvm/bin:$PATH"
 export LDFLAGS="-L/opt/homebrew/opt/llvm/lib"
 export CPPFLAGS="-I/opt/homebrew/opt/llvm/include"
+
+# clear screen and scrollback
+cl() { printf '\033[3J'; clear "$@"; }

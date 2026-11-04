@@ -102,6 +102,9 @@
             "editorBracketHighlight.foreground2": "#a0d0d0",
             "editorBracketHighlight.foreground3": "#d0d0d0",
         },
+        "editorGutter.addedSecondaryBackground": "#e0a060",
+        "editorGutter.modifiedSecondaryBackground": "#b180d7",
+        "editorGutter.deletedSecondaryBackground": "#b180d7",
     },
     "editor.rulers": [140],
     "editor.fontFamily": "'JetBrains Mono'",
@@ -340,5 +343,6 @@
     },
     "comments.openView": "never",
     "diffEditor.useInlineViewWhenSpaceIsLimited": true,
+    "diffEditor.experimental.showMoves": true,
 }
 

@@ -146,6 +146,7 @@ if __name__ == '__main__':
             choices.append(questionary.Choice(label, ('session', name)))
         for i, (name, branch) in enumerate(folders_with_branches):
             choices.append(questionary.Choice(f"{name} @ {branch}", ('folder', i)))
+        choices.append(questionary.Choice("~", ('home', None)))
 
         question = questionary.select(
             f"SSH into @{hostname}:",
@@ -178,18 +179,22 @@ if __name__ == '__main__':
         set_tab_title(value)
         subprocess.run(f"ssh -t {hostname} 'tmux attach -t {value}'", shell=True)
     else:
-        folder, branch = folders_with_branches[value]
-        folder_safe = re.sub(r'[^a-z0-9]', '-', folder.lower())
-        session_name = f"{folder_safe[:48]}-{uuid.uuid4().hex[:6]}"
+        if kind == 'home':
+            where, cwd, name_base = '~', '$HOME', 'home'
+        else:
+            folder, branch = folders_with_branches[value]
+            where, cwd = f"{folder} @ '{branch}'", f'$HOME/{folder}'
+            name_base = re.sub(r'[^a-z0-9]', '-', folder.lower())[:48]
+        session_name = f"{name_base}-{uuid.uuid4().hex[:6]}"
         set_tab_title(session_name)
 
         if args.cmd:
             command = ' '.join(args.cmd)
-            print(f"SSHing into {folder} @ '{branch}' via tmux '{session_name}' running '{command}'...")
+            print(f"SSHing into {where} via tmux '{session_name}' running '{command}'...")
             if args.i:
-                subprocess.run(f"ssh -t {hostname} 'tmux new-session -A -s {session_name} -c \"$HOME/{folder}\" fish -C \"{command}\"'", shell=True)
+                subprocess.run(f"ssh -t {hostname} 'tmux new-session -A -s {session_name} -c \"{cwd}\" fish -C \"{command}\"'", shell=True)
             else:
-                subprocess.run(f"ssh -t {hostname} 'tmux new-session -A -s {session_name} -c \"$HOME/{folder}\" bash -c \"{command}\"'", shell=True)
+                subprocess.run(f"ssh -t {hostname} 'tmux new-session -A -s {session_name} -c \"{cwd}\" bash -c \"{command}\"'", shell=True)
         else:
-            print(f"SSHing into {folder} @ '{branch}' via tmux '{session_name}'...")
-            subprocess.run(f"ssh -t {hostname} 'tmux new-session -A -s {session_name} -c \"$HOME/{folder}\" fish'", shell=True)
+            print(f"SSHing into {where} via tmux '{session_name}'...")
+            subprocess.run(f"ssh -t {hostname} 'tmux new-session -A -s {session_name} -c \"{cwd}\" fish'", shell=True)

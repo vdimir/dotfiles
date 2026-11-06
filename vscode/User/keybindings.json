@@ -1,11 +1,6 @@
 // Place your key bindings in this file to override the defaultsauto[]
 [
     {
-        "key": "f2",
-        "command": "bookmarks.toggle",
-        "when": "editorTextFocus"
-    },
-    {
         "key": "ctrl+alt+k",
         "command": "-bookmarks.toggle",
         "when": "editorTextFocus"
@@ -22,11 +17,6 @@
     {
         "key": "f3",
         "command": "-editor.action.nextMatchFindAction",
-        "when": "editorFocus"
-    },
-    {
-        "key": "f3",
-        "command": "editor.action.nextSelectionMatchFindAction",
         "when": "editorFocus"
     },
     {
@@ -649,5 +639,60 @@
         "key": "alt+cmd+s",
         "command": "workbench.action.toggleUnifiedSidebarFromKeyboard",
         "when": "!isAuxiliaryWindowFocusedContext"
+    },
+    {
+        "key": "f3",
+        "command": "-workbench.action.terminal.findNext",
+        "when": "terminalFindFocused && terminalHasBeenCreated || terminalFindFocused && terminalProcessSupported || terminalFocusInAny && terminalHasBeenCreated || terminalFocusInAny && terminalProcessSupported"
+    },
+    {
+        "key": "f3",
+        "command": "-list.find",
+        "when": "listFocus && listSupportsFind"
+    },
+    {
+        "key": "f3",
+        "command": "-list.find.replInputFocus",
+        "when": "view == 'workbench.panel.repl.view'"
+    },
+    {
+        "key": "f3",
+        "command": "-notebook.findNext.fromWidget",
+        "when": "findWidgetVisible && notebookEditorFocused"
+    },
+    {
+        "key": "f3",
+        "command": "-workbench.action.chat.findNext",
+        "when": "chatFindSupported && inChat && !editorFocus"
+    },
+    {
+        "key": "f3",
+        "command": "editor.action.dirtydiff.next",
+        "when": "editorTextFocus && !textCompareEditorActive"
+    },
+    {
+        "key": "alt+f3",
+        "command": "-editor.action.dirtydiff.next",
+        "when": "editorTextFocus && !textCompareEditorActive"
+    },
+    {
+        "key": "f2",
+        "command": "-markdown.editor.rename",
+        "when": "markdownEditorFocus && activeCustomEditorId == 'vscode.markdown.editor'"
+    },
+    {
+        "key": "f2",
+        "command": "-agentSession.rename",
+        "when": "chatSessionSupportsRename && inChat && !isSessionsWindow && !quickChatHasFocus"
+    },
+    {
+        "key": "f2",
+        "command": "workbench.action.compareEditor.nextChange",
+        "when": "textCompareEditorVisible"
+    },
+    {
+        "key": "f2",
+        "command": "workbench.action.editor.nextChange",
+        "when": "editorTextFocus && !textCompareEditorActive"
     }
 ]

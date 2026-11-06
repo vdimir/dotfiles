@@ -344,5 +344,7 @@
     "comments.openView": "never",
     "diffEditor.useInlineViewWhenSpaceIsLimited": true,
     "diffEditor.experimental.showMoves": true,
+    "scm.diffDecorationsGutterWidth": 4,
+    "editor.glyphMargin": true,
 }
 

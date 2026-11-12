@@ -36,4 +36,4 @@
 [branch]
     sort = -committerdate
 [gpg "ssh"]
-	allowedSignersFile = /home/ubuntu/.config/git/allowed_signers
+	allowedSignersFile = ~/.config/git/allowed_signers

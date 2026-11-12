@@ -6,10 +6,6 @@
         "when": "editorTextFocus"
     },
     {
-        "key": "shift+f2",
-        "command": "bookmarks.listFromAllFiles"
-    },
-    {
         "key": "ctrl+f3",
         "command": "editor.action.nextMatchFindAction",
         "when": "editorFocus"
@@ -230,7 +226,7 @@
         "when": "textCompareEditorVisible"
     },
     {
-        "key": "cmd+e cmd+s",
+        "key": "shift+f2",
         "command": "workbench.action.compareEditor.previousChange",
         "when": "textCompareEditorVisible"
     },
@@ -240,7 +236,7 @@
         "when": "textCompareEditorVisible"
     },
     {
-        "key": "shift+alt+b",
+        "key": "shift+f2",
         "command": "workbench.action.editor.previousChange",
         "when": "editorTextFocus && !textCompareEditorActive"
     },
@@ -694,5 +690,15 @@
         "key": "f2",
         "command": "workbench.action.editor.nextChange",
         "when": "editorTextFocus && !textCompareEditorActive"
+    },
+    {
+        "key": "shift+f2",
+        "command": "multiDiffEditor.goToPreviousChange",
+        "when": "activeEditor == 'multiDiffEditor'"
+    },
+    {
+        "key": "shift+alt+f5",
+        "command": "-multiDiffEditor.goToPreviousChange",
+        "when": "activeEditor == 'multiDiffEditor'"
     }
 ]

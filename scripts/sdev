@@ -19,6 +19,37 @@ import uuid
 from fnmatch import fnmatch
 
 import questionary
+from questionary.prompts.common import InquirerControl
+from prompt_toolkit.mouse_events import MouseButton, MouseEventType
+
+def enable_mouse(question):
+    """Hover moves the pointer, click picks, wheel scrolls. questionary ignores
+    mouse events, so handle them on its list control, where row y is choice y.
+    The question must be built with mouse_support=True."""
+    app = question.application
+    ic = next(c for c in app.layout.find_all_controls() if isinstance(c, InquirerControl))
+
+    def handler(event):
+        kind, row = event.event_type, event.position.y
+        if kind in (MouseEventType.SCROLL_UP, MouseEventType.SCROLL_DOWN):
+            step = -1 if kind == MouseEventType.SCROLL_UP else 1
+            ic.pointed_at = max(0, min(ic.choice_count - 1, ic.pointed_at + step))
+            return None
+        if row >= ic.choice_count:
+            return NotImplemented
+        if kind == MouseEventType.MOUSE_MOVE:
+            ic.pointed_at = row
+            return None
+        # release events carry no button in non-SGR mouse modes
+        if kind == MouseEventType.MOUSE_UP and event.button in (MouseButton.LEFT, MouseButton.UNKNOWN):
+            ic.pointed_at = row
+            if ic.is_selection_valid():
+                ic.is_answered = True
+                app.exit(result=ic.get_pointed_at().value)
+            return None
+        return NotImplemented
+
+    ic.mouse_handler = handler
 
 class Stopwatch:
     def __init__(self):
@@ -27,45 +58,145 @@ class Stopwatch:
     def elapsed(self):
         return time.time() - self.start
 
-def kitty_window_titles():
-    """Titles of all kitty windows except the one running this script, used to
-    spot tmux sessions that already have a local kitty tab. Empty set outside
-    kitty or when remote control is unavailable."""
-    if not os.environ.get('KITTY_LISTEN_ON'):
-        return set()
-    try:
-        result = subprocess.run(['kitten', '@', 'ls'], stdout=subprocess.PIPE,
-                                stderr=subprocess.DEVNULL, timeout=2)
-        if result.returncode != 0:
-            return set()
-        win_id = os.environ.get('KITTY_WINDOW_ID')
-        titles = set()
-        for os_window in json.loads(result.stdout):
-            for tab in os_window.get('tabs', []):
-                for window in tab.get('windows', []):
-                    if win_id and str(window.get('id')) == win_id:
-                        continue
-                    titles.add(window.get('title', ''))
-        return titles
-    except (subprocess.TimeoutExpired, ValueError, OSError):
-        return set()
+def rquote(word):
+    """Quote a word for the remote login shell, which is fish. Valid in POSIX sh
+    too. fish treats \\ and \\' as escapes inside single quotes, so shlex.quote
+    is not enough: those two characters go in double quotes instead."""
+    if re.fullmatch(r'[\w@%+=:,./-]+', word):
+        return word
+    return "'" + word.replace("'", "'\"'\"'").replace('\\', "'\"\\\\\"'") + "'"
 
-def focus_kitty_tab(session_name):
-    """If some kitty window already holds this tmux session (its tab title was
-    set to the session name on attach), focus it instead of attaching again.
-    Needs `allow_remote_control socket-only` + `listen_on` in kitty.conf.
-    Returns True if a window was focused."""
-    if not os.environ.get('KITTY_LISTEN_ON'):
-        return False
+def remote(*words):
+    """Command line for `ssh host <cmd>` that runs exactly these argv words."""
+    return ' '.join(rquote(w) for w in words)
+
+def run_json(cmd):
+    result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+                            timeout=2, check=True)
+    return json.loads(result.stdout)
+
+# agterm reports a title only for a tab's main pane, never for its split, so
+# each sdev run also notes "pid, agterm pane -> tmux session" here while ssh runs
+AGTERM_RECORDS = os.path.expanduser('~/.cache/sdev/agterm')
+
+def record_agterm_pane(tmux_session):
+    """Note that this process shows tmux_session in its agterm pane, so other
+    sdev runs can jump here. Returns a callable that removes the note."""
+    pane_id = os.environ.get('AGTERM_PANE_ID')
+    path = os.path.join(AGTERM_RECORDS, f'{os.getpid()}.json')
+    try:
+        if not pane_id:
+            raise OSError
+        os.makedirs(AGTERM_RECORDS, exist_ok=True)
+        with open(path, 'w') as f:
+            json.dump({'tmux': tmux_session, 'pane': pane_id}, f)
+    except OSError:
+        return lambda: None
+    def remove():
+        try:
+            os.remove(path)
+        except OSError:
+            pass
+    return remove
+
+def agterm_records():
+    """{agterm pane id: tmux session} noted by sdev runs still alive. A note
+    left behind by a killed run (tab closed) is dropped."""
+    found = {}
+    try:
+        names = os.listdir(AGTERM_RECORDS)
+    except OSError:
+        return found
+    for name in names:
+        path = os.path.join(AGTERM_RECORDS, name)
+        try:
+            os.kill(int(name.removesuffix('.json')), 0)
+            with open(path) as f:
+                note = json.load(f)
+            found[note['pane']] = note['tmux']
+        except ProcessLookupError:
+            try:
+                os.remove(path)
+            except OSError:
+                pass
+        except (ValueError, OSError, KeyError):
+            continue
+    return found
+
+def agterm_tabs():
+    own_session = os.environ['AGTERM_SESSION_ID']
+    own_pane = os.environ.get('AGTERM_PANE_ID')
+    records = agterm_records()
+    noted, titled = [], []
+    for window in run_json(['agtermctl', 'window', 'list', '--json'])['result']['windows']:
+        if not window.get('open'):
+            continue
+        tree = run_json(['agtermctl', 'tree', '--json', '--window', window['id']])['result']['tree']
+        for workspace in tree.get('workspaces', []):
+            for session in workspace.get('sessions', []):
+                split = session.get('split')
+                surfaces = session.get('surfaces', [])
+                for surface in surfaces:
+                    tmux = records.get(surface.get('paneID'))
+                    if tmux and surface['paneID'] != own_pane:
+                        pane = surface.get('kind') if split else None
+                        noted.append((window['id'], session['id'], tmux, pane))
+                # title is the main pane's raw OSC title, absent until it sets one
+                main = next((s['paneID'] for s in surfaces if s.get('kind') == 'left'), None)
+                is_own = main == own_pane if main and own_pane else session['id'] == own_session
+                if session.get('title') and not is_own:
+                    titled.append((window['id'], session['id'], session['title'], 'left' if split else None))
+    return noted + titled
+
+def kitty_tabs():
+    own = os.environ.get('KITTY_WINDOW_ID')
+    tabs = []
+    for os_window in run_json(['kitten', '@', 'ls']):
+        for tab in os_window.get('tabs', []):
+            for window in tab.get('windows', []):
+                if str(window.get('id')) != own:
+                    tabs.append((None, window['id'], window.get('title', ''), None))
+    return tabs
+
+def local_tabs():
+    """(window, tab id, title, pane) of every tab of the local terminal (agterm
+    or kitty) except the pane running this script, used to spot tmux sessions
+    that already have a local tab. pane is the agterm split pane to focus, or
+    None. Empty in other terminals or when their remote control is unavailable;
+    kitty needs `allow_remote_control socket-only` + `listen_on` in kitty.conf."""
+    try:
+        if os.environ.get('AGTERM_SESSION_ID'):
+            return agterm_tabs()
+        if os.environ.get('KITTY_LISTEN_ON'):
+            return kitty_tabs()
+    except (subprocess.SubprocessError, OSError, ValueError, KeyError):
+        pass
+    return []
+
+def shows_tmux_session(title, session_name):
     # tmux set-titles-string is "<pane title> (<session>)", or bare session name
-    match = f'title:^(?:{re.escape(session_name)}|.* \\({re.escape(session_name)}\\))$'
-    win_id = os.environ.get('KITTY_WINDOW_ID')
-    if win_id:
-        match += f' and not id:{win_id}'
-    result = subprocess.run(
-        ['kitten', '@', 'focus-window', '--match', match],
-        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    return result.returncode == 0
+    return title == session_name or title.endswith(f' ({session_name})')
+
+def focus_tab(tab):
+    """Bring a tab from local_tabs() to the front. Returns True on success."""
+    window, tab_id, _, pane = tab
+    def run(cmd):
+        try:
+            subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                           timeout=2, check=True)
+            return True
+        except (subprocess.SubprocessError, OSError):
+            return False
+    if not os.environ.get('AGTERM_SESSION_ID'):
+        return run(['kitten', '@', 'focus-window', '--match', f'id:{tab_id}'])
+    if not run(['agtermctl', 'session', 'select', '--target', tab_id, '--window', window]):
+        return False
+    # the tab is selected; the rest is best effort
+    if pane in ('left', 'right'):
+        run(['agtermctl', 'session', 'focus', pane, '--target', tab_id, '--window', window])
+    if window != os.environ.get('AGTERM_WINDOW_ID'):
+        run(['agtermctl', 'window', 'select', window])
+    return True
 
 def set_tab_title(title):
     """Set terminal tab/window title via OSC escape (kitty, iTerm2, etc.)."""
@@ -82,25 +213,37 @@ if __name__ == '__main__':
     hostname = args.host
     if not hostname:
         argparser.error('no host: pass --host or set SSH_DEV_HOST')
-    get_folders_cmd = f"""
-        ssh {hostname} 'bash -c "for f in ClickHouse* clickhouse-*; do
-            [ -d \\"\\$f\\" ] && [ -d \\"\\$f/.git\\" ] || continue;
-            echo -n \\"\\$f \\";
-            git -C \\"\\$f\\" rev-parse --abbrev-ref HEAD;
-        done"'
-    """.strip()
+    # "HOME\t<remote $HOME>", then "<folder>\t<branch>" per checkout
+    list_folders = r'''
+        printf 'HOME\t%s\n' "$HOME"
+        for f in ClickHouse* clickhouse-*; do
+            [ -d "$f/.git" ] || continue
+            printf '%s\t%s\n' "$f" "$(git -C "$f" rev-parse --abbrev-ref HEAD)"
+        done
+    '''
+    get_folders_cmd = ['ssh', hostname, remote('bash', '-c', list_folders)]
 
-    tmux_fmt = "session_name=#{session_name}\tcmd=#{pane_current_command}\tattached=#{session_attached}\ttitle=#{pane_title}\thost=#{host}"
-    get_sessions_cmd = f"ssh {hostname} 'tmux list-sessions -F \"{tmux_fmt}\" 2>/dev/null'"
+    tmux_fmt = "session_name=#{session_name}\tcmd=#{pane_current_command}\tattached=#{session_attached}\ttitle=#{pane_title}\thost=#{host}\tpath=#{pane_current_path}"
+    get_sessions_cmd = ['ssh', hostname, remote('tmux', 'list-sessions', '-F', tmux_fmt) + ' 2>/dev/null']
 
-    folders_proc = subprocess.Popen(get_folders_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    sessions_proc = subprocess.Popen(get_sessions_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    folders_proc = subprocess.Popen(get_folders_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    sessions_proc = subprocess.Popen(get_sessions_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
+    # the counter appears only when the listing is slow; wait() returns as soon
+    # as ssh exits, so a fast listing is not held back to the next tick
     sw = Stopwatch()
-    while folders_proc.poll() is None:
-        time.sleep(0.1)
-        print(f'\r{sw.elapsed():.02f}s', end='', flush=True)
-    print()
+    counter_shown = False
+    while True:
+        try:
+            folders_proc.wait(timeout=0.05)
+            break
+        except subprocess.TimeoutExpired:
+            pass
+        if sw.elapsed() >= 0.25:
+            counter_shown = True
+            print(f'\r{sw.elapsed():.02f}s', end='', flush=True)
+    if counter_shown:
+        print()
 
     folders_stdout, folders_stderr = folders_proc.communicate()
     sessions_stdout, _ = sessions_proc.communicate()
@@ -110,7 +253,24 @@ if __name__ == '__main__':
         print(folders_stderr.decode('utf-8'), end='', file=sys.stderr)
         sys.exit(1)
 
-    folders_with_branches = list(filter(lambda x: len(x) == 2, (name.strip().split(' ') for name in folders_stdout.decode('utf-8').splitlines())))
+    folder_lines = [line.split('\t') for line in folders_stdout.decode('utf-8').splitlines()]
+    remote_home = next((v for k, *v in folder_lines if k == 'HOME' and v), [''])[0]
+    if not remote_home:
+        print('Could not read $HOME on the remote host', file=sys.stderr)
+        sys.exit(1)
+    folders_with_branches = [p for p in folder_lines if len(p) == 2 and all(p) and p[0] != 'HOME']
+    branches = dict(folders_with_branches)
+
+    def describe_path(path):
+        """'ClickHouse1/src @ branch' inside a checkout, else '~/dir' or the path."""
+        if path == remote_home:
+            return '~'
+        if not path.startswith(remote_home + '/'):
+            return path
+        rel = path[len(remote_home) + 1:]
+        branch = branches.get(rel.split('/', 1)[0])
+        return f"{rel} @ {branch}" if branch else f"~/{rel}"
+
     def parse_tmux_session(line):
         fields = dict(f.split('=', 1) for f in line.strip().split('\t') if '=' in f)
         return fields
@@ -128,16 +288,21 @@ if __name__ == '__main__':
     if args.b and len(folders_with_branches) == 1 and not tmux_sessions:
         selection = ('folder', 0)
 
+    tabs = []
     if selection is None:
-        kitty_titles = kitty_window_titles() if tmux_sessions else set()
+        tabs = local_tabs() if tmux_sessions else []
         choices = []
         for session in tmux_sessions:
             name = session.get('session_name', '?')
             cmd = session.get('cmd', '')
             attached = session.get('attached', '0') != '0'
-            in_kitty = any(t == name or t.endswith(f' ({name})') for t in kitty_titles)
-            tag = '◉' if in_kitty else ('●' if attached else '○')
-            label = f"{tag} {name}  ({cmd})" if cmd else f"{tag} {name}"
+            in_tab = any(shows_tmux_session(t[2], name) for t in tabs)
+            tag = '◉' if in_tab else ('●' if attached else '○')
+            label = f"{tag} {name}"
+            if session.get('path'):
+                label += f"  {describe_path(session['path'])}"
+            if cmd:
+                label += f"  ({cmd})"
             # pane_title carries app status (e.g. Claude Code sets it via OSC);
             # it defaults to the host name, so only show it when overridden
             title = session.get('title', '')
@@ -153,6 +318,7 @@ if __name__ == '__main__':
             choices=choices,
             pointer='▸',
             use_shortcuts=True,
+            mouse_support=True,
             style=questionary.Style([
                 ("highlighted", "fg:#ffffff"),
                 ("text", "fg:#aaaaaa"),
@@ -164,6 +330,8 @@ if __name__ == '__main__':
         def _cancel(event):
             event.app.exit(result=None)
 
+        enable_mouse(question)
+
         result = question.ask()
         if result is None:
             sys.exit(1)
@@ -171,30 +339,40 @@ if __name__ == '__main__':
 
     kind, value = selection
 
+    def ssh_tmux(tmux_session, *tmux_args):
+        """Run tmux on the host over an interactive ssh, noting the pane meanwhile."""
+        unrecord = record_agterm_pane(tmux_session)
+        try:
+            subprocess.run(['ssh', '-t', hostname, remote('tmux', *tmux_args)])
+        finally:
+            unrecord()
+
     if kind == 'session':
-        if focus_kitty_tab(value):
-            print(f"Switched to kitty tab already attached to '{value}'")
+        tab = next((t for t in tabs if shows_tmux_session(t[2], value)), None)
+        if tab and focus_tab(tab):
+            print(f"Switched to the tab already attached to '{value}'")
             sys.exit(0)
         print(f"Attaching to tmux session '{value}'...")
         set_tab_title(value)
-        subprocess.run(f"ssh -t {hostname} 'tmux attach -t {value}'", shell=True)
+        ssh_tmux(value, 'attach', '-t', value)
     else:
         if kind == 'home':
-            where, cwd, name_base = '~', '$HOME', 'home'
+            where, cwd, name_base = '~', remote_home, 'home'
         else:
             folder, branch = folders_with_branches[value]
-            where, cwd = f"{folder} @ '{branch}'", f'$HOME/{folder}'
+            where, cwd = f"{folder} @ '{branch}'", f'{remote_home}/{folder}'
             name_base = re.sub(r'[^a-z0-9]', '-', folder.lower())[:48]
         session_name = f"{name_base}-{uuid.uuid4().hex[:6]}"
         set_tab_title(session_name)
 
+        shell = ['fish']
         if args.cmd:
-            command = ' '.join(args.cmd)
+            # a single argument is a shell snippet (sdev 'make && ls'), several
+            # are argv words whose quoting must survive (sdev grep 'a b' file)
+            command = args.cmd[0] if len(args.cmd) == 1 else remote(*args.cmd)
+            shell = ['fish', '-C', command] if args.i else ['bash', '-c', command]
             print(f"SSHing into {where} via tmux '{session_name}' running '{command}'...")
-            if args.i:
-                subprocess.run(f"ssh -t {hostname} 'tmux new-session -A -s {session_name} -c \"{cwd}\" fish -C \"{command}\"'", shell=True)
-            else:
-                subprocess.run(f"ssh -t {hostname} 'tmux new-session -A -s {session_name} -c \"{cwd}\" bash -c \"{command}\"'", shell=True)
         else:
             print(f"SSHing into {where} via tmux '{session_name}'...")
-            subprocess.run(f"ssh -t {hostname} 'tmux new-session -A -s {session_name} -c \"{cwd}\" fish'", shell=True)
+        # tmux runs a multi-word command directly, without another shell
+        ssh_tmux(session_name, 'new-session', '-A', '-s', session_name, '-c', cwd, *shell)

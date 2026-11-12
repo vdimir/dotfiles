@@ -52,7 +52,12 @@ periodic() {
 
 PERIOD=2
 
+# Tab title = current folder name, at every prompt. Terminals keep the last
+# title a program set (ssh/tmux, claude, vim) and agterm ignores an empty one,
+# so the shell has to put its own back. The bare name, not a path: agterm also
+# ignores a title equal to the tab's cwd, which %1d gives for /tmp.
 precmd() {
+    print -rn -- $'\e]0;'"${${PWD:t}:-/}"$'\a'
 }
 
 autoload -U colors && colors

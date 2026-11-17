@@ -12,15 +12,61 @@ import sys
 import os
 import re
 import json
+import shlex
+import shutil
 import subprocess
 import argparse
 import time
 import uuid
 from fnmatch import fnmatch
 
+import threading
+import zlib
+
 import questionary
 from questionary.prompts.common import InquirerControl
+from prompt_toolkit.filters import Condition, is_done
+from prompt_toolkit.formatted_text import ANSI, to_formatted_text
+from prompt_toolkit.layout import ConditionalContainer, Dimension, FormattedTextControl, HSplit, Window
 from prompt_toolkit.mouse_events import MouseButton, MouseEventType
+from prompt_toolkit.output import ColorDepth
+
+# Tokyo Night accents (with Dracula's yellow; Tokyo Night's is too close to its
+# orange), all distinct when rounded to 256 colors. Ordered so that neighbours
+# are far apart in hue: a session whose hash color is taken gets the next one.
+#                 red        green      blue       orange     teal       purple     yellow     cyan
+SESSION_COLORS = ['#f7768e', '#9ece6a', '#7aa2f7', '#ff9e64', '#73daca', '#bb9af7', '#f1fa8c', '#7dcfff']
+
+def session_colors(names):
+    """Color for each tmux session, picked by a hash of its name. names go
+    oldest first: a session whose color an older one already has takes the
+    next free one, so listed sessions differ while there are enough colors and
+    an existing session keeps its color when a new one appears."""
+    colors, n = {}, len(SESSION_COLORS)
+    for name in names:
+        start = zlib.crc32(name.encode()) % n
+        ring = [SESSION_COLORS[(start + k) % n] for k in range(n)]
+        colors[name] = next((c for c in ring if c not in colors.values()), ring[0])
+    return colors
+
+def paint_sessions(question, colors):
+    """Draw each session name of the list in its color, bold on the pointed row."""
+    ic = next(c for c in question.application.layout.find_all_controls() if isinstance(c, InquirerControl))
+    rows = ic.text  # questionary's own row renderer
+
+    def painted():
+        out = []
+        for style, text, *rest in to_formatted_text(rows()):
+            name = next((n for n in colors if n in text), None)
+            if name is None:
+                out.append((style, text, *rest))
+                continue
+            before, after = text.split(name, 1)
+            bold = ' bold' if 'highlighted' in style else ''
+            out += [(style, before), (f'{style} fg:{colors[name]}{bold}', name), (style, after)]
+        return out
+
+    ic.text = painted
 
 def enable_mouse(question):
     """Hover moves the pointer, click picks, wheel scrolls. questionary ignores
@@ -50,6 +96,100 @@ def enable_mouse(question):
         return NotImplemented
 
     ic.mouse_handler = handler
+
+# waits shorter than this show no elapsed-time counter, so fast ones don't flicker
+COUNTER_DELAY = 0.25
+
+def enable_preview(question, capture, title, follow=False):
+    """A preview under the list. Space previews the highlighted choice only;
+    moving to another one hides it. p turns on a preview that follows the
+    pointer, and off again; follow starts with it on. capture(value) returns
+    (text with ANSI colors, from_bottom) or None when the choice has nothing
+    to show; it runs in a thread and its result is kept until Space or p asks
+    for a fresh one. title(value) is the header line as formatted text."""
+    app = question.application
+    ic = next(c for c in app.layout.find_all_controls() if isinstance(c, InquirerControl))
+    following = [follow]  # p: the preview follows the pointer
+    pinned = [None]       # space: the one choice being previewed
+    previews = {}  # choice value -> (text, from_bottom), None while capturing
+    started = {}   # choice value -> when its capture began
+
+    def pointed():
+        return ic.get_pointed_at().value
+
+    def capture_async(value):
+        previews[value] = None
+        started[value] = time.time()
+        def work():
+            try:
+                previews[value] = capture(value) or ('', False)
+            except Exception as e:
+                previews[value] = (f'preview failed: {e}', False)
+            app.invalidate()
+        def tick():
+            # redraw the counter until the capture is in, or the preview is
+            # toggled off (which empties previews)
+            while previews.get(value, '') is None:
+                time.sleep(0.05)
+                app.invalidate()
+        threading.Thread(target=work, daemon=True).start()
+        threading.Thread(target=tick, daemon=True).start()
+
+    def body():
+        value = pointed()
+        if value not in previews:
+            capture_async(value)
+        if previews[value] is None:
+            elapsed = time.time() - started[value]
+            return [('fg:#777777', f'loading… {elapsed:.02f}s')] if elapsed >= COUNTER_DELAY else []
+        text, from_bottom = previews[value]
+        frags = list(to_formatted_text(ANSI(text)))
+        if from_bottom:
+            # the window scrolls to keep this cursor visible, so putting it at
+            # the start of the last line shows the bottom of text that does not fit
+            for i in reversed(range(len(frags))):
+                style, chunk = frags[i][0], frags[i][1]
+                if '\n' in chunk:
+                    head, tail = chunk.rsplit('\n', 1)
+                    frags[i:i + 1] = [(style, head + '\n'), ('[SetCursorPosition]', ''), (style, tail)]
+                    break
+        return frags
+
+    def body_height():
+        # exactly what is left after the question, the list, the header and the
+        # two blank lines: a spare row would be handed to the list as a gap
+        return Dimension(max=max(3, app.output.get_size().rows - ic.choice_count - 4))
+
+    @app.key_bindings.add(' ')
+    def _preview_current(event):
+        if following[0]:
+            previews.pop(pointed(), None)  # already shown: capture it afresh
+        elif pinned[0] == pointed():
+            pinned[0] = None
+        else:
+            pinned[0] = pointed()
+            previews.pop(pinned[0], None)
+
+    # eager, so it wins over the choice shortcut a list of 26+ rows puts on p
+    @app.key_bindings.add('p', eager=True)
+    def _toggle_following(event):
+        following[0] = not following[0]
+        pinned[0] = None
+        previews.clear()
+
+    def visible():
+        # checked on every redraw, so leaving the row drops it for good
+        if pinned[0] is not None and pinned[0] != pointed():
+            pinned[0] = None
+        return following[0] or pinned[0] is not None
+
+    blank = lambda: Window(height=1)
+    app.layout.container.children.append(ConditionalContainer(
+        HSplit([blank(),
+                Window(FormattedTextControl(lambda: title(pointed())), height=1),
+                Window(FormattedTextControl(body), height=body_height),
+                blank()]),
+        filter=Condition(visible) & ~is_done))
 
 class Stopwatch:
     def __init__(self):
@@ -141,10 +281,16 @@ def agterm_tabs():
                     if tmux and surface['paneID'] != own_pane:
                         pane = surface.get('kind') if split else None
                         noted.append((window['id'], session['id'], tmux, pane))
-                # title is the main pane's raw OSC title, absent until it sets one
+                # title is the main pane's raw OSC title, absent until it sets one.
+                # It outlives the ssh that set it (zsh here sets none), so trust
+                # it only while the pane still runs ssh or sdev. An overlay has no
+                # pane id of its own: the tab under it counts then, so picking
+                # that tab's session just closes the overlay
                 main = next((s['paneID'] for s in surfaces if s.get('kind') == 'left'), None)
-                is_own = main == own_pane if main and own_pane else session['id'] == own_session
-                if session.get('title') and not is_own:
+                is_own = bool(own_pane) and (main == own_pane if main else session['id'] == own_session)
+                runs_ssh = any(os.path.basename(a) in ('ssh', 'sd', 'sdev')
+                               for a in (session.get('foreground') or [])[:4])
+                if session.get('title') and runs_ssh and not is_own:
                     titled.append((window['id'], session['id'], session['title'], 'left' if split else None))
     return noted + titled
 
@@ -206,13 +352,30 @@ if __name__ == '__main__':
     argparser = argparse.ArgumentParser()
     argparser.add_argument('-b', help='git branch pattern')
     argparser.add_argument('-i', action='store_true', help='Continue interactive mode after running command')
+    argparser.add_argument('--preview', action='store_true', help='Start with the preview on, following the pointer, as if p was pressed (space previews just the highlighted row)')
     argparser.add_argument('cmd', nargs='*', default=None, help='Command to run')
     argparser.add_argument('--host', default=os.getenv('SSH_DEV_HOST', ''), help='SSH host to connect to')
+    argparser.add_argument('--new-tab', action='store_true', help='agterm, for running in an overlay: open the ssh in a new tab right after the one under the overlay instead of here (a session already shown in a tab is jumped to either way)')
     args = argparser.parse_args()
+
+    if args.new_tab and not os.environ.get('AGTERM_SESSION_ID'):
+        argparser.error('--new-tab needs agterm')
+
+    def fail(message=None):
+        """Exit 1. With --new-tab the overlay closes as soon as this exits, so
+        hold it until Enter for the message to be read."""
+        if message:
+            print(message, file=sys.stderr)
+        if args.new_tab:
+            try:
+                input('Press Enter to close')
+            except (EOFError, KeyboardInterrupt):
+                pass
+        sys.exit(1)
 
     hostname = args.host
     if not hostname:
-        argparser.error('no host: pass --host or set SSH_DEV_HOST')
+        fail(f'{argparser.prog}: no host: pass --host or set SSH_DEV_HOST')
     # "HOME\t<remote $HOME>", then "<folder>\t<branch>" per checkout
     list_folders = r'''
         printf 'HOME\t%s\n' "$HOME"
@@ -221,13 +384,14 @@ if __name__ == '__main__':
             printf '%s\t%s\n' "$f" "$(git -C "$f" rev-parse --abbrev-ref HEAD)"
         done
     '''
-    get_folders_cmd = ['ssh', hostname, remote('bash', '-c', list_folders)]
+    # -n: ssh must not read the terminal, or keys typed while loading are lost
+    get_folders_cmd = ['ssh', '-n', hostname, remote('bash', '-c', list_folders)]
 
-    tmux_fmt = "session_name=#{session_name}\tcmd=#{pane_current_command}\tattached=#{session_attached}\ttitle=#{pane_title}\thost=#{host}\tpath=#{pane_current_path}"
-    get_sessions_cmd = ['ssh', hostname, remote('tmux', 'list-sessions', '-F', tmux_fmt) + ' 2>/dev/null']
+    tmux_fmt = "session_name=#{session_name}\tcmd=#{pane_current_command}\tattached=#{session_attached}\ttitle=#{pane_title}\thost=#{host}\tpath=#{pane_current_path}\tcreated=#{session_created}"
+    get_sessions_cmd = ['ssh', '-n', hostname, remote('tmux', 'list-sessions', '-F', tmux_fmt) + ' 2>/dev/null']
 
-    folders_proc = subprocess.Popen(get_folders_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    sessions_proc = subprocess.Popen(get_sessions_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    folders_proc = subprocess.Popen(get_folders_cmd, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    sessions_proc = subprocess.Popen(get_sessions_cmd, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     # the counter appears only when the listing is slow; wait() returns as soon
     # as ssh exits, so a fast listing is not held back to the next tick
@@ -239,7 +403,7 @@ if __name__ == '__main__':
             break
         except subprocess.TimeoutExpired:
             pass
-        if sw.elapsed() >= 0.25:
+        if sw.elapsed() >= COUNTER_DELAY:
             counter_shown = True
             print(f'\r{sw.elapsed():.02f}s', end='', flush=True)
     if counter_shown:
@@ -251,13 +415,12 @@ if __name__ == '__main__':
     if folders_proc.returncode != 0:
         print(folders_stdout.decode('utf-8'), end='')
         print(folders_stderr.decode('utf-8'), end='', file=sys.stderr)
-        sys.exit(1)
+        fail()
 
     folder_lines = [line.split('\t') for line in folders_stdout.decode('utf-8').splitlines()]
     remote_home = next((v for k, *v in folder_lines if k == 'HOME' and v), [''])[0]
     if not remote_home:
-        print('Could not read $HOME on the remote host', file=sys.stderr)
-        sys.exit(1)
+        fail('Could not read $HOME on the remote host')
     folders_with_branches = [p for p in folder_lines if len(p) == 2 and all(p) and p[0] != 'HOME']
     branches = dict(folders_with_branches)
 
@@ -276,13 +439,14 @@ if __name__ == '__main__':
         return fields
 
     tmux_sessions = [s for s in (parse_tmux_session(line) for line in sessions_stdout.decode('utf-8').splitlines() if line.strip()) if s.get('session_name')]
+    oldest_first = sorted(tmux_sessions, key=lambda s: int(s.get('created') or 0))
+    colors = session_colors([s['session_name'] for s in oldest_first])
 
     if args.b:
         folders_with_branches = list(filter(lambda x: fnmatch(x[1], f"*{args.b}*"), folders_with_branches))
 
     if not folders_with_branches and not tmux_sessions:
-        print('No ClickHouse folders or tmux sessions found')
-        sys.exit(1)
+        fail('No ClickHouse folders or tmux sessions found')
 
     selection = None
     if args.b and len(folders_with_branches) == 1 and not tmux_sessions:
@@ -309,8 +473,18 @@ if __name__ == '__main__':
             if title and title not in (session.get('host', ''), cmd, name):
                 label += f"  — {title}"
             choices.append(questionary.Choice(label, ('session', name)))
+        # sessions per checkout, by where their active pane is
+        open_in = {}
+        for session in tmux_sessions:
+            path = session.get('path', '')
+            if path.startswith(remote_home + '/'):
+                top = path[len(remote_home) + 1:].split('/', 1)[0]
+                open_in[top] = open_in.get(top, 0) + 1
         for i, (name, branch) in enumerate(folders_with_branches):
-            choices.append(questionary.Choice(f"{name} @ {branch}", ('folder', i)))
+            label = f"{name} @ {branch}"
+            if open_in.get(name):
+                label += f"  · {open_in[name]} session{'s' if open_in[name] > 1 else ''}"
+            choices.append(questionary.Choice(label, ('folder', i)))
         choices.append(questionary.Choice("~", ('home', None)))
 
         question = questionary.select(
@@ -319,6 +493,9 @@ if __name__ == '__main__':
             pointer='▸',
             use_shortcuts=True,
             mouse_support=True,
+            # prompt_toolkit ignores $COLORTERM and would round colors to 256
+            color_depth=ColorDepth.TRUE_COLOR if os.environ.get('COLORTERM') in ('truecolor', '24bit') else None,
+            instruction='(Use shortcuts or arrow keys, space: preview, p: keep previewing, c: open with claude)',
             style=questionary.Style([
                 ("highlighted", "fg:#ffffff"),
                 ("text", "fg:#aaaaaa"),
@@ -330,22 +507,97 @@ if __name__ == '__main__':
         def _cancel(event):
             event.app.exit(result=None)
 
+        # c on a checkout or ~ opens a new session running claude; a session
+        # row already has its own program, so c does nothing there. Eager, so
+        # it wins over the choice shortcut the 13th row gets on c
+        @question.application.key_bindings.add('c', eager=True)
+        def _open_with_claude(event):
+            ic = next(c for c in event.app.layout.find_all_controls() if isinstance(c, InquirerControl))
+            kind, v = ic.get_pointed_at().value
+            if kind != 'session':
+                ic.is_answered = True
+                event.app.exit(result=(kind, v, 'claude'))
+
+        def capture_preview(value):
+            """A session's screen, bottom first; a checkout's `git lg` and status."""
+            kind, v = value
+            if kind == 'session':
+                cmd, from_bottom = remote('tmux', 'capture-pane', '-p', '-e', '-t', f'={v}:'), True
+            elif kind == 'folder':
+                path = f'{remote_home}/{folders_with_branches[v][0]}'
+                # submodules: report a moved commit but do not scan their trees,
+                # which takes seconds with ClickHouse's 150+ submodules
+                script = r'''
+                    cd "$1" || exit
+                    git -c color.ui=always lg
+                    printf '\n\n'
+                    changes=$(git -c color.ui=always status --short --ignore-submodules=dirty)
+                    if [ -n "$changes" ]; then printf '%s\n' "$changes"
+                    else printf '\033[3;38;2;119;119;119m✓ no uncommitted changes\033[m\n'; fi  # gray italic
+                '''
+                cmd, from_bottom = remote('bash', '-c', script, 'sdev-preview', path), False
+            else:
+                return None
+            # -n: ssh must not read the terminal, the picker is reading it
+            result = subprocess.run(['ssh', '-n', hostname, cmd], stdin=subprocess.DEVNULL,
+                                    stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=10)
+            text = (result.stdout if result.returncode == 0 else result.stderr).decode('utf-8', 'replace')
+            lines = text.rstrip('\n').split('\n')
+            # drop the empty rows below a shell prompt
+            while len(lines) > 1 and not re.sub(r'\x1b\[[0-9;:]*m', '', lines[-1]).strip():
+                lines.pop()
+            return '\n'.join(lines), from_bottom
+
+        def preview_title(value):
+            kind, v = value
+            dim = 'fg:#777777'
+            if kind == 'session':
+                return [(dim, '── '), (f"fg:{colors.get(v, '#ffffff')} bold", v), (dim, ' ──')]
+            if kind == 'folder':
+                folder, branch = folders_with_branches[v]
+                return [(dim, '── '), ('fg:#ffffff bold', folder), (dim, f' @ {branch} ──')]
+            return [(dim, '── no preview ──')]
+
         enable_mouse(question)
+        paint_sessions(question, colors)
+        enable_preview(question, capture_preview, preview_title, follow=args.preview)
 
         result = question.ask()
         if result is None:
             sys.exit(1)
         selection = result
 
-    kind, value = selection
+    kind, value, *extra = selection
+    with_claude = 'claude' in extra
 
     def ssh_tmux(tmux_session, *tmux_args):
-        """Run tmux on the host over an interactive ssh, noting the pane meanwhile."""
+        """Run tmux on the host over an interactive ssh, noting the pane meanwhile.
+        With --new-tab the ssh runs in a new agterm tab instead, which closes when
+        it ends. zsh -i gives it this shell's environment (the agent ssh forwards),
+        not agterm's, and exec leaves ssh as the tab's program, so sdev runs find
+        the tab by the title tmux sets. A tab's main pane needs no note."""
+        if args.new_tab:
+            ssh = shlex.join([shutil.which('ssh') or 'ssh', '-t', hostname, remote('tmux', *tmux_args)])
+            new_tab = ['agtermctl', 'session', 'new', '--after', os.environ['AGTERM_SESSION_ID'],
+                       '--window', os.environ['AGTERM_WINDOW_ID'], '--cwd', os.getcwd(),
+                       '--command', 'zsh -ic ' + shlex.quote('exec ' + ssh)]
+            try:
+                subprocess.run(new_tab, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
+                               timeout=5, check=True)
+            except subprocess.CalledProcessError as e:
+                fail(f"Could not open a tab: {e.stderr.decode('utf-8', 'replace').strip()}")
+            except (subprocess.SubprocessError, OSError) as e:
+                fail(f'Could not open a tab: {e}')
+            return
+        set_tab_title(tmux_session)
         unrecord = record_agterm_pane(tmux_session)
         try:
             subprocess.run(['ssh', '-t', hostname, remote('tmux', *tmux_args)])
         finally:
             unrecord()
+            # replace the tmux title, the tab is a local shell again. agterm
+            # ignores an empty title, so set what it shows by default: the folder
+            set_tab_title(os.path.basename(os.getcwd()) or '/')
 
     if kind == 'session':
         tab = next((t for t in tabs if shows_tmux_session(t[2], value)), None)
@@ -353,7 +605,6 @@ if __name__ == '__main__':
             print(f"Switched to the tab already attached to '{value}'")
             sys.exit(0)
         print(f"Attaching to tmux session '{value}'...")
-        set_tab_title(value)
         ssh_tmux(value, 'attach', '-t', value)
     else:
         if kind == 'home':
@@ -363,10 +614,13 @@ if __name__ == '__main__':
             where, cwd = f"{folder} @ '{branch}'", f'{remote_home}/{folder}'
             name_base = re.sub(r'[^a-z0-9]', '-', folder.lower())[:48]
         session_name = f"{name_base}-{uuid.uuid4().hex[:6]}"
-        set_tab_title(session_name)
 
         shell = ['fish']
-        if args.cmd:
+        if with_claude:
+            # fish -C: when claude exits, the session stays on a shell
+            shell = ['fish', '-C', 'claude']
+            print(f"SSHing into {where} via tmux '{session_name}' running claude...")
+        elif args.cmd:
             # a single argument is a shell snippet (sdev 'make && ls'), several
             # are argv words whose quoting must survive (sdev grep 'a b' file)
             command = args.cmd[0] if len(args.cmd) == 1 else remote(*args.cmd)

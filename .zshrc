@@ -112,6 +112,8 @@ alias -g xo='xclip -o -sel clipboard'
 alias cdp='popd'
 alias gis='git status'
 
+alias cld='CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1 claude'
+
 alias br='printf "=%.0s" {1..$(tput cols)}; echo'
 
 bindkey "\e\e[D" backward-word

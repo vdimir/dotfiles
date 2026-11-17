@@ -344,6 +344,68 @@ def focus_tab(tab):
         run(['agtermctl', 'window', 'select', window])
     return True
 
+# open PR numbers from the last run, shown at once while GitHub is asked again
+PR_CACHE = os.path.expanduser('~/.cache/sdev/prs.json')
+# never the head of a PR worth showing; saves asking about them
+DEFAULT_BRANCHES = ('HEAD', 'master', 'main')
+
+def github_repo(url):
+    """(owner, name) of a GitHub remote URL, ssh or https, else None."""
+    m = re.search(r'github\.com[:/]([\w.-]+)/([\w.-]+?)(?:\.git)?/?$', url)
+    return (m.group(1), m.group(2)) if m else None
+
+def pr_cache_key(owner, repo, branch):
+    return f'{owner}/{repo} {branch}'  # a branch name has no space
+
+def read_pr_cache():
+    try:
+        with open(PR_CACHE) as f:
+            cache = json.load(f)
+        return cache if isinstance(cache, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+def write_pr_cache(cache):
+    try:
+        os.makedirs(os.path.dirname(PR_CACHE), exist_ok=True)
+        tmp = f'{PR_CACHE}.{os.getpid()}'
+        with open(tmp, 'w') as f:
+            json.dump(cache, f)
+        os.replace(tmp, PR_CACHE)
+    except OSError:
+        pass
+
+def fetch_open_prs(heads):
+    """Ask GitHub, with the local gh, for the open PR of each (owner, repo,
+    branch) in one query. Returns {head: PR number or None}, without the heads
+    GitHub gave no answer for (no access to the repo); raises when gh fails.
+    A branch name also matches PRs from forks, so of several PRs the one from
+    the repo itself wins, then one of the gh user; a lone PR is taken as is."""
+    heads = list(heads)
+    parts = ['viewer { login }']
+    for i, (owner, repo, branch) in enumerate(heads):
+        # a JSON string is a valid GraphQL string
+        parts.append(f'h{i}: repository(owner: {json.dumps(owner)}, name: {json.dumps(repo)}) {{'
+                     f' pullRequests(headRefName: {json.dumps(branch)}, states: OPEN, first: 20) {{'
+                     ' nodes { number author { login } headRepository { nameWithOwner } } } }')
+    query = 'query { ' + ' '.join(parts) + ' }'
+    # gh exits 1 when any repository is inaccessible but still prints the rest
+    result = subprocess.run(['gh', 'api', 'graphql', '-f', f'query={query}'], stdin=subprocess.DEVNULL,
+                            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, timeout=10)
+    data = json.loads(result.stdout)['data']
+    viewer = (data.get('viewer') or {}).get('login')
+    found = {}
+    for i, head in enumerate(heads):
+        if not data.get(f'h{i}'):
+            continue
+        prs = data[f'h{i}']['pullRequests']['nodes']
+        same_repo = [p for p in prs if (p.get('headRepository') or {}).get('nameWithOwner', '').lower()
+                     == f'{head[0]}/{head[1]}'.lower()]
+        own = [p for p in prs if (p.get('author') or {}).get('login') == viewer]
+        pick = same_repo or own or (prs if len(prs) == 1 else [])
+        found[head] = pick[0]['number'] if pick else None
+    return found
+
 def set_tab_title(title):
     """Set terminal tab/window title via OSC escape (kitty, iTerm2, etc.)."""
     print(f'\033]0;{title}\007', end='', flush=True)
@@ -376,12 +438,13 @@ if __name__ == '__main__':
     hostname = args.host
     if not hostname:
         fail(f'{argparser.prog}: no host: pass --host or set SSH_DEV_HOST')
-    # "HOME\t<remote $HOME>", then "<folder>\t<branch>" per checkout
+    # "HOME\t<remote $HOME>", then "<folder>\t<branch>\t<origin url>" per checkout
     list_folders = r'''
         printf 'HOME\t%s\n' "$HOME"
         for f in ClickHouse* clickhouse-*; do
             [ -d "$f/.git" ] || continue
-            printf '%s\t%s\n' "$f" "$(git -C "$f" rev-parse --abbrev-ref HEAD)"
+            printf '%s\t%s\t%s\n' "$f" "$(git -C "$f" rev-parse --abbrev-ref HEAD)" \
+                "$(git -C "$f" remote get-url origin 2>/dev/null)"
         done
     '''
     # -n: ssh must not read the terminal, or keys typed while loading are lost
@@ -421,8 +484,51 @@ if __name__ == '__main__':
     remote_home = next((v for k, *v in folder_lines if k == 'HOME' and v), [''])[0]
     if not remote_home:
         fail('Could not read $HOME on the remote host')
-    folders_with_branches = [p for p in folder_lines if len(p) == 2 and all(p) and p[0] != 'HOME']
+    checkouts = [p for p in folder_lines if len(p) == 3 and all(p[:2]) and p[0] != 'HOME']
+    folders_with_branches = [p[:2] for p in checkouts]
     branches = dict(folders_with_branches)
+
+    # checkout folder -> (owner, repo, branch) its open PR is looked up by
+    pr_heads = {}
+    for folder, branch, origin in checkouts:
+        repo = github_repo(origin)
+        if repo and branch not in DEFAULT_BRANCHES:
+            pr_heads[folder] = (*repo, branch)
+    pr_cache = read_pr_cache()
+    # checkout folder -> open PR number: the cached ones, replaced by
+    # refresh_prs() once GitHub answers
+    prs = {folder: pr_cache[pr_cache_key(*head)] for folder, head in pr_heads.items()
+           if pr_cache_key(*head) in pr_cache}
+
+    def refresh_prs():
+        """Bring prs and the cache up to date. Returns True when prs changed."""
+        try:
+            found = fetch_open_prs(set(pr_heads.values()))
+        except (subprocess.SubprocessError, OSError, ValueError, KeyError, TypeError):
+            return False  # no gh, not logged in, offline: keep the cached numbers
+        fresh = dict(prs)
+        for folder, head in pr_heads.items():
+            if found.get(head):
+                fresh[folder] = found[head]
+            elif head in found:
+                fresh.pop(folder, None)
+        # re-read: another run may have written meanwhile
+        cache = read_pr_cache()
+        for head, number in found.items():
+            if number:
+                cache[pr_cache_key(*head)] = number
+            else:
+                cache.pop(pr_cache_key(*head), None)
+        write_pr_cache(cache)
+        if fresh == prs:
+            return False
+        prs.clear()
+        prs.update(fresh)
+        return True
+
+    def at_branch(folder):
+        """'branch', or 'branch #123' when it has an open PR."""
+        return f"{branches[folder]} #{prs[folder]}" if folder in prs else branches[folder]
 
     def describe_path(path):
         """'ClickHouse1/src @ branch' inside a checkout, else '~/dir' or the path."""
@@ -431,8 +537,8 @@ if __name__ == '__main__':
         if not path.startswith(remote_home + '/'):
             return path
         rel = path[len(remote_home) + 1:]
-        branch = branches.get(rel.split('/', 1)[0])
-        return f"{rel} @ {branch}" if branch else f"~/{rel}"
+        top = rel.split('/', 1)[0]
+        return f"{rel} @ {at_branch(top)}" if top in branches else f"~/{rel}"
 
     def parse_tmux_session(line):
         fields = dict(f.split('=', 1) for f in line.strip().split('\t') if '=' in f)
@@ -455,8 +561,7 @@ if __name__ == '__main__':
     tabs = []
     if selection is None:
         tabs = local_tabs() if tmux_sessions else []
-        choices = []
-        for session in tmux_sessions:
+        def session_label(session):
             name = session.get('session_name', '?')
             cmd = session.get('cmd', '')
             attached = session.get('attached', '0') != '0'
@@ -472,7 +577,8 @@ if __name__ == '__main__':
             title = session.get('title', '')
             if title and title not in (session.get('host', ''), cmd, name):
                 label += f"  — {title}"
-            choices.append(questionary.Choice(label, ('session', name)))
+            return label
+
         # sessions per checkout, by where their active pane is
         open_in = {}
         for session in tmux_sessions:
@@ -480,12 +586,20 @@ if __name__ == '__main__':
             if path.startswith(remote_home + '/'):
                 top = path[len(remote_home) + 1:].split('/', 1)[0]
                 open_in[top] = open_in.get(top, 0) + 1
-        for i, (name, branch) in enumerate(folders_with_branches):
-            label = f"{name} @ {branch}"
+
+        def folder_label(name):
+            label = f"{name} @ {at_branch(name)}"
             if open_in.get(name):
                 label += f"  · {open_in[name]} session{'s' if open_in[name] > 1 else ''}"
-            choices.append(questionary.Choice(label, ('folder', i)))
-        choices.append(questionary.Choice("~", ('home', None)))
+            return label
+
+        # each row with the function that writes its label, to write it again
+        # when the PR numbers arrive
+        rows = [(questionary.Choice(session_label(s), ('session', s['session_name'])), lambda s=s: session_label(s))
+                for s in tmux_sessions]
+        rows += [(questionary.Choice(folder_label(name), ('folder', i)), lambda name=name: folder_label(name))
+                 for i, (name, _) in enumerate(folders_with_branches)]
+        choices = [choice for choice, _ in rows] + [questionary.Choice("~", ('home', None))]
 
         question = questionary.select(
             f"SSH into @{hostname}:",
@@ -554,13 +668,23 @@ if __name__ == '__main__':
             if kind == 'session':
                 return [(dim, '── '), (f"fg:{colors.get(v, '#ffffff')} bold", v), (dim, ' ──')]
             if kind == 'folder':
-                folder, branch = folders_with_branches[v]
-                return [(dim, '── '), ('fg:#ffffff bold', folder), (dim, f' @ {branch} ──')]
+                folder = folders_with_branches[v][0]
+                return [(dim, '── '), ('fg:#ffffff bold', folder), (dim, f' @ {at_branch(folder)} ──')]
             return [(dim, '── no preview ──')]
 
         enable_mouse(question)
         paint_sessions(question, colors)
         enable_preview(question, capture_preview, preview_title, follow=args.preview)
+
+        def show_fresh_prs():
+            if refresh_prs():
+                for choice, label in rows:
+                    choice.title = label()
+                question.application.invalidate()
+
+        if pr_heads:
+            # the list is not held back by GitHub: cached numbers show at once
+            threading.Thread(target=show_fresh_prs, daemon=True).start()
 
         result = question.ask()
         if result is None:
